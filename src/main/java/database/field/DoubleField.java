@@ -1,15 +1,15 @@
 package database.field;
 
-public class IntField implements Field, Comparable<Field> {
-    private int value;
+public class DoubleField implements Field, Comparable<Field> {
+    private double value;
 
-    public IntField(int value) {
+    public DoubleField(double value) {
         this.value = value;
     }
 
     @Override
     public String getClazz() {
-        return int.class.getName();
+        return double.class.getName();
     }
 
     @Override
@@ -17,22 +17,13 @@ public class IntField implements Field, Comparable<Field> {
         return Field.super.compareTo(other);
     }
 
-
-    public int getValue() {
-        return value;
-    }
-
-    public long getLongValue() {
-        return value;
-    }
-
-    public double getDoubleValue() {
+    public double getValue() {
         return value;
     }
 
     @Override
     public String toString() {
-        return "IntField{" +
+        return "DoubleField{" +
                 "value=" + value +
                 '}';
     }

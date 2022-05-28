@@ -1,5 +1,6 @@
 package controller;
 
+import database.field.*;
 import parser.IParser;
 import parser.Parser;
 
@@ -7,6 +8,8 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -16,6 +19,15 @@ public class DatabaseManagementSystem {
     //todo add gradle logger dependency
 
     public static void main(String[] args) throws IOException {
+        List<Field> fields = new ArrayList<>();
+        fields.add(new IntField(5));
+        fields.add(new DoubleField(5.01d));
+        fields.add(new LongField(1L));
+        fields.sort(Field::compareTo);
+        System.out.println(fields);
+        Field[][] fields1 = new Field[2][4];
+        fields1[1][2] = new LongField(5L);
+        System.out.println(Arrays.deepToString(fields1));
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         String input = in.readLine();
 
