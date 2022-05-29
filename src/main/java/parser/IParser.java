@@ -1,7 +1,9 @@
 package parser;
 
+import parser.ast.AstProgram;
+
 public interface IParser {
     //return ast-tree head
     //pass the input into parser inside
-    void parse(String input);
+    AstProgram parse(String input);
 }
