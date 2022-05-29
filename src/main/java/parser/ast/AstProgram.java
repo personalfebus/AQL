@@ -1,5 +1,7 @@
 package parser.ast;
 
+import parser.ast.function.AstFunction;
+
 import java.util.HashSet;
 import java.util.Set;
 

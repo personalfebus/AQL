@@ -5,7 +5,7 @@ import lexer.Lexer;
 import lexer.token.EofToken;
 import lexer.token.Token;
 import lexer.token.Tokens;
-import parser.ast.AstFunction;
+import parser.ast.function.AstFunction;
 import parser.ast.AstProgram;
 import parser.exception.SyntaxException;
 
