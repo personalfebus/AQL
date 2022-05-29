@@ -2,7 +2,11 @@ identifier := [A-Za-z] [A-Za-z0-9\_]*
 number := [0-9]+ | 0x[a-fA-F0-9]
 symbol := '[.]' | '\u[0-9]+'
 string := "[.]*"
+operator := ";" | "." | "(" | ")" | "," | "=" | ">" | "<" | ">=" | "<=" | "!=" | "+" | "-" | "*" | "/".
 
-keyword :=
-
-operator :=
+keyword := type_keyword | "if" | "not" | "exists" | "crate" | "table" | "primary" | "key" | "foreign"
+          | "references" | "unique" | "null" | "default" | "alter" | "add" | "column" | "drop"
+          | "rename" | "to" | "index" | "insert" | "into" | "values" | "update" | "set"
+          | "where" | "and" | "or" | "delete" | "from" | "on" | "using" | "btree" | "hash"
+          | "select" | "as".
+type_keyword := "int" | "serial" | "long" | "bigserial" | "double" | "string" | "timestamp".

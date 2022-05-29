@@ -2,12 +2,13 @@ program := function ";" program | .
 function := table_functions | table_data_functions | index_functions | query_functions.
 
 ident := [a-zA-Z][a-zA-Z0-9]*.
-type := "int" | "serial" | "long" | "bigserial" | "double" | "string" | "timestamp".
+type := type_keyword.
 value := symbol | string | number.
 schema_name := ident.
 table_name := schema_name "." ident.
 index_name := ident.
 field_name := ident.
+field_reference := ident "." ident.
 if_exists_prefix := "if" "exists" | .
 if_not_exists_prefix := "if" "not" "exists" | .
 
@@ -32,6 +33,7 @@ add_column_function := "add" "column" if_not_exists_prefix column_definition.
 drop_column_function := "drop" "column" if_exists_prefix field_name.
 rename_column_function := "rename" "column" if_exists_prefix field_name "to" field_name.
 rename_table_function := "rename" "table" if_exists_prefix table_name "to" table_name.
+rename_index_function := "rename" "index" if_exists_prefix index_name "to" index_name.
 
 drop_table_function := "drop" "table" if_exists_prefix table_name.
 

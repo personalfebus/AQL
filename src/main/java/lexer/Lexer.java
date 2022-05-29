@@ -5,8 +5,7 @@ import lexer.token.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-//TODO числа с плавающей точкой, идентификаторы, ключевые слова, (возможно) даты
-//TODO Optional подумать над поддержкой русских букв
+//Optional даты, подумать над поддержкой русских букв
 public class Lexer implements ILexer {
     private final String input;
     private int position;
@@ -68,7 +67,13 @@ public class Lexer implements ILexer {
                 int start = position;
                 skipToEndOfLexeme();
                 String number = input.substring(start, position);
-                currentToken = new NumberToken(number, line, linePosition);
+                int dotPosition = number.indexOf('.');
+
+                if (dotPosition < 0) {
+                    currentToken = new IntegerNumberToken(number, line, linePosition);
+                } else {
+                    currentToken = new FloatingNumberToken(number, line, linePosition);
+                }
                 return;
             } else if (isSingleQuote()) {
                 // lex character
@@ -129,25 +134,20 @@ public class Lexer implements ILexer {
     private int isOperator() {
         //operators + separators
         if (position < input.length() - 1) {
-            if ((input.charAt(position) == '-' && input.charAt(position + 1) == '>') ||
-                    (input.charAt(position) == '=' && input.charAt(position + 1) == '=') ||
+            if ((input.charAt(position) == '=' && input.charAt(position + 1) == '=') ||
                     (input.charAt(position) == '!' && input.charAt(position + 1) == '=') ||
                     (input.charAt(position) == '<' && input.charAt(position + 1) == '=') ||
-                    (input.charAt(position) == '>' && input.charAt(position + 1) == '=') ||
-                    (input.charAt(position) == '|' && input.charAt(position + 1) == '|') ||
-                    (input.charAt(position) == '&' && input.charAt(position + 1) == '&') ||
-                    (input.charAt(position) == '^' && input.charAt(position + 1) == '^')) {
+                    (input.charAt(position) == '>' && input.charAt(position + 1) == '=')
+            ) {
                 return 2;
             }
         }
-        if (input.charAt(position) == '=' || input.charAt(position) == '+' ||
-                input.charAt(position) == '-' || input.charAt(position) == '/' ||
-                input.charAt(position) == '%' || input.charAt(position) == '^' ||
-                input.charAt(position) == '!' || input.charAt(position) == '<' ||
-                input.charAt(position) == '>' || input.charAt(position) == '(' ||
-                input.charAt(position) == ')' || input.charAt(position) == '[' ||
-                input.charAt(position) == ']' || input.charAt(position) == ',' ||
-                input.charAt(position) == ';') {
+        if (input.charAt(position) == ';' || input.charAt(position) == '.' ||
+                input.charAt(position) == '(' || input.charAt(position) == ')' ||
+                input.charAt(position) == ',' || input.charAt(position) == '=' ||
+                input.charAt(position) == '+' || input.charAt(position) == '-' ||
+                input.charAt(position) == '*' || input.charAt(position) == '/'
+        ) {
             return 1;
         } else {
             return 0;
@@ -164,31 +164,49 @@ public class Lexer implements ILexer {
 
     private boolean isKeyword(String word) {
         //case insensitive
-        return word.equalsIgnoreCase("bool") ||
-                word.equalsIgnoreCase("char") ||
-                word.equalsIgnoreCase("check") ||
-                word.equalsIgnoreCase("do") ||
-                word.equalsIgnoreCase("else") ||
-                word.equalsIgnoreCase("elseif") ||
-                word.equalsIgnoreCase("endfor") ||
-                word.equalsIgnoreCase("endfunc") ||
-                word.equalsIgnoreCase("endif") ||
-                word.equalsIgnoreCase("endproc") ||
-                word.equalsIgnoreCase("endwhile") ||
-                word.equalsIgnoreCase("ff") ||
-                word.equalsIgnoreCase("for") ||
-                word.equalsIgnoreCase("func") ||
+        return word.equalsIgnoreCase("int") ||
+                word.equalsIgnoreCase("serial") ||
+                word.equalsIgnoreCase("long") ||
+                word.equalsIgnoreCase("bigserial") ||
+                word.equalsIgnoreCase("double") ||
+                word.equalsIgnoreCase("string") ||
+                word.equalsIgnoreCase("timestamp") ||
                 word.equalsIgnoreCase("if") ||
-                word.equalsIgnoreCase("int") ||
-                word.equalsIgnoreCase("nil") ||
-                word.equalsIgnoreCase("proc") ||
-                word.equalsIgnoreCase("repeat") ||
-                word.equalsIgnoreCase("step") ||
-                word.equalsIgnoreCase("then") ||
+                word.equalsIgnoreCase("not") ||
+                word.equalsIgnoreCase("exists") ||
+                word.equalsIgnoreCase("crate") ||
+                word.equalsIgnoreCase("table") ||
+                word.equalsIgnoreCase("primary") ||
+                word.equalsIgnoreCase("key") ||
+                word.equalsIgnoreCase("foreign") ||
+                word.equalsIgnoreCase("references") ||
+                word.equalsIgnoreCase("unique") ||
+                word.equalsIgnoreCase("null") ||
+                word.equalsIgnoreCase("default") ||
+                word.equalsIgnoreCase("alter") ||
+                word.equalsIgnoreCase("add") ||
+                word.equalsIgnoreCase("column") ||
+                word.equalsIgnoreCase("drop") ||
+                word.equalsIgnoreCase("rename") ||
                 word.equalsIgnoreCase("to") ||
-                word.equalsIgnoreCase("tt") ||
-                word.equalsIgnoreCase("until") ||
-                word.equalsIgnoreCase("while");
+                word.equalsIgnoreCase("index") ||
+                word.equalsIgnoreCase("insert") ||
+                word.equalsIgnoreCase("into") ||
+                word.equalsIgnoreCase("values") ||
+                word.equalsIgnoreCase("update") ||
+                word.equalsIgnoreCase("set") ||
+                word.equalsIgnoreCase("where") ||
+                word.equalsIgnoreCase("and") ||
+                word.equalsIgnoreCase("or") ||
+                word.equalsIgnoreCase("delete") ||
+                word.equalsIgnoreCase("from") ||
+                word.equalsIgnoreCase("on") ||
+                word.equalsIgnoreCase("using") ||
+                word.equalsIgnoreCase("btree") ||
+                word.equalsIgnoreCase("hash") ||
+                word.equalsIgnoreCase("select") ||
+                word.equalsIgnoreCase( "as")
+                ;
     }
 
     private void skipToEndOfLexeme() {

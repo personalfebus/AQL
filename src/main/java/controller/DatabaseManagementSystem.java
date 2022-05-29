@@ -28,6 +28,9 @@ public class DatabaseManagementSystem {
         Field[][] fields1 = new Field[2][4];
         fields1[1][2] = new LongField(5L);
         System.out.println(Arrays.deepToString(fields1));
+
+        System.out.println(Double.parseDouble("3.14"));
+
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         String input = in.readLine();
 

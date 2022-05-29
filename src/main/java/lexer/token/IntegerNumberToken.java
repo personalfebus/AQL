@@ -5,12 +5,12 @@ import lexer.token.exception.BadNumberSyntaxError;
 /**
  * Десятичные или шестнадцатиричные целые числа
  */
-public class NumberToken implements Token {
+public class IntegerNumberToken implements Token {
     private final long number;
     private final int line;
     private final int position;
 
-    public NumberToken(String input, int line, int position) throws BadNumberSyntaxError {
+    public IntegerNumberToken(String input, int line, int position) throws BadNumberSyntaxError {
         this.line = line;
         this.position = position;
         if (input.length() > 1 && input.charAt(0) == '0' && input.charAt(1) == 'x') {
@@ -63,7 +63,7 @@ public class NumberToken implements Token {
 
     @Override
     public String getType() {
-        return NumberToken.class.getName();
+        return IntegerNumberToken.class.getName();
     }
 
     @Override
