@@ -1,0 +1,79 @@
+program := function ";" program | .
+function := table_functions | table_data_functions | index_functions | query_functions.
+
+ident := [a-zA-Z][a-zA-Z0-9]*.
+type := "int" | "serial" | "long" | "bigserial" | "double" | "string" | "timestamp".
+value := symbol | string | number.
+schema_name := ident.
+table_name := schema_name "." ident.
+index_name := ident.
+field_name := ident.
+if_exists_prefix := "if" "exists" | .
+if_not_exists_prefix := "if" "not" "exists" | .
+
+
+table_functions := create_table_function | alter_table_function | drop_table_function.
+
+create_table_function :=  create_table_function_start create_table_function_body.
+create_table_function_start := "crate" "table" if_not_exists_prefix table_name.
+create_table_function_body := "(" column_definition_list ")".
+column_definition_list := column_definition "," column_definition_list | column_definition.
+column_definition := field_name type constraint
+constraint := primary_key_constraint | foreign_key_constraint | unique_constraint | not_null_constraint | default_constraint.
+primary_key_constraint := "primary" "key".
+foreign_key_constraint := "foreign" "key" "references" table_name "(" field_name ")".
+unique_constraint := "unique".
+not_null_constraint := "not" "null".
+default_constraint := "default" value.
+
+alter_table_function := "alter" "table" if_exists_prefix table_name alter_table_body.
+alter_table_body := add_column_function | drop_column_function | rename_column_function | rename_table_function
+add_column_function := "add" "column" if_not_exists_prefix column_definition.
+drop_column_function := "drop" "column" if_exists_prefix field_name.
+rename_column_function := "rename" "column" if_exists_prefix field_name "to" field_name.
+rename_table_function := "rename" "table" if_exists_prefix table_name "to" table_name.
+
+drop_table_function := "drop" "table" if_exists_prefix table_name.
+
+
+table_data_functions := insert_function | update_function | delete_function.
+
+insert_function := "insert" "into" table_name "(" columns_list ")" "values" insert_function_values_block.
+columns_list := field_name "," column_list | .
+insert_function_values_block := "(" insert_function_values_list ")" "," insert_function_values_block | .
+insert_function_values_list := value "," insert_function_values_list | .
+
+update_function := "update" table_name "set" field_name "=" value update_function_postfix.
+condition_postfix := "where" condition.
+
+condition := condition_and_block.
+condition_and_block := condition_or_block "and" condition_and_block | condition_or_block .
+condition_or_block := condition_comparison_block "or" condition_or_block | condition_comparison_block.
+condition_comparison_block := condition_comparison_arith ">" condition_comparison_arith
+                            | condition_comparison_arith "<" condition_comparison_arith
+                            | condition_comparison_arith "=" condition_comparison_arith
+                            | condition_comparison_arith ">=" condition_comparison_arith
+                            | condition_comparison_arith "<=" condition_comparison_arith
+                            | "(" condition ")".
+condition_comparison_arith := condition_comparison_values "+" condition_comparison_values
+                            | condition_comparison_values "-" condition_comparison_values
+                            | condition_comparison_values "*" condition_comparison_values
+                            | condition_comparison_values "/" condition_comparison_values
+                            | "(" condition_comparison_arith ")".
+condition_comparison_values := field_name | value.
+
+delete_function := "delete" "from" table_name condition_postfix.
+
+
+index_functions := create_index_function | drop_index_function.
+
+create_index_function := "create" "index" index_name "on" table_name "(" field_name ")" "using" index_type.
+index_type := "btree" | "hash".
+
+drop_index_function := "drop" "index" if_exists_prefix index_name "from" "table" table_name.
+
+query_functions := select_function.
+select_function := "select" select_variable_list "from" table_name "as" table_alias select_function_join_block condition_postfix. //todo add aggregation
+select_variable_list := field_reference select_variable_sub_list | "*".
+select_variable_sub_list := "," field_reference select_variable_sub_list | .
+select_function_join_block := .

@@ -4,20 +4,20 @@ import java.io.Serializable;
 
 public class BTree implements Serializable {
     private BTreeNode root;
-    //number of keys in one node
-    private final int width;
+    //minimum number of children of one node
+    private final int t;
     private final int numberOfFields;
     private final int keyGenerator;
 
-    public BTree(BTreeNode root, int width, int numberOfFields) {
+    public BTree(BTreeNode root, int t, int numberOfFields) {
         this.root = root;
-        this.width = width;
+        this.t = t;
         this.numberOfFields = numberOfFields;
         this.keyGenerator = 0;
     }
 
-    public BTree(int width, int numberOfFields, int keyGenerator) {
-        this.width = width;
+    public BTree(int t, int numberOfFields, int keyGenerator) {
+        this.t = t;
         this.numberOfFields = numberOfFields;
         this.keyGenerator = keyGenerator;
     }

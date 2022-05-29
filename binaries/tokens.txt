@@ -1,0 +1,8 @@
+identifier := [A-Za-z] [A-Za-z0-9\_]*
+number := [0-9]+ | 0x[a-fA-F0-9]
+symbol := '[.]' | '\u[0-9]+'
+string := "[.]*"
+
+keyword :=
+
+operator :=

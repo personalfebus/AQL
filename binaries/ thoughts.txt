@@ -1,0 +1,23 @@
+BTree {
+BTreeNode root;
+FileSystemUniqueIdentifier ident;
+}
+
+BTreeNode {
+BTreeNode[] nodes (len = n)
+PageUniqueIdentifier ident;
+long[] keys (len = n+1)
+PayloadUniqueIdentifier ident;
+long[] payloadKeys (len = n+1)
+}
+
+Возмонжо стоит сделать 2 разных класса для таблиц и индексов
+
+command line commands:
+new [database name]
+checkout [database name]
+delete [database name]
+
+Сценарии обработки кеша/диска:
+При каждой операции читать/писать на диск и по окончанию убирать дерево из кеша
+Сделать хот споты с метрикой по давности последнего обращения и количеству обращений

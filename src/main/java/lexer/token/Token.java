@@ -1,5 +1,8 @@
 package lexer.token;
 
 public interface Token {
-    //type?
+    String getType();
+    String getBody();
+    int getLine();
+    int getPosition();
 }
