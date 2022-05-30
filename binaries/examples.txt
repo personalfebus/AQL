@@ -1,0 +1,14 @@
+create table if not exists bmstu.students (
+   id bigserial primary key,
+   name string not null,
+   surname string not null,
+   patronymic string default "",
+   identity_code string unique
+);
+
+alter table if exists bmstu.students set
+    identity_code = "18U726",
+    name = "Gleb"
+where id = 89883;
+
+drop table if exists bmstu.students;
