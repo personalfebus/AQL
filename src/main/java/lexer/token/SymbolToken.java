@@ -46,4 +46,8 @@ public class SymbolToken implements Token {
     public int getPosition() {
         return position;
     }
+
+    public char getChar() {
+        return body;
+    }
 }

@@ -28,7 +28,7 @@ not_null_constraint := "not" "null".
 default_constraint := "default" value.
 
 alter_table_function := "alter" "table" if_exists_prefix table_name alter_table_body.
-alter_table_body := add_column_function | drop_column_function | rename_column_function | rename_table_function
+alter_table_body := add_column_function | drop_column_function | rename_column_function | rename_table_function | rename_index_function.
 add_column_function := "add" "column" if_not_exists_prefix column_definition.
 drop_column_function := "drop" "column" if_exists_prefix field_name.
 rename_column_function := "rename" "column" if_exists_prefix field_name "to" field_name.

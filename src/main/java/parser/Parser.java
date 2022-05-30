@@ -2,17 +2,19 @@ package parser;
 
 import lexer.ILexer;
 import lexer.Lexer;
-import lexer.token.EofToken;
-import lexer.token.Token;
-import lexer.token.Tokens;
+import lexer.token.*;
 import parser.ast.AstType;
-import parser.ast.constraint.AstConstraint;
+import parser.ast.constraint.*;
 import parser.ast.function.AstFunction;
 import parser.ast.AstProgram;
 import parser.ast.function.AstColumnDefinition;
+import parser.ast.function.table.AstAlterTableFunction;
 import parser.ast.function.table.AstCreateTableFunction;
+import parser.ast.function.table.alter.*;
 import parser.ast.name.AstFieldName;
+import parser.ast.name.AstIndexName;
 import parser.ast.name.AstTableName;
+import parser.ast.value.*;
 import parser.exception.SyntaxException;
 
 import java.util.ArrayList;
@@ -65,12 +67,119 @@ public class Parser implements IParser {
 
         if (currentToken.getBody().equalsIgnoreCase("create")) {
             return parseCreateTableFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("alter")) {
+            return parseAlterTableFunction();
         }
 
         return null;
     }
 
-    //todo
+    private AstAlterTableFunction parseAlterTableFunction() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("alter");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("table");
+        nextToken();
+        boolean hasIfExistPrefix = parseIfExistPrefix();
+        AstTableName tableName = parseTableName();
+        AstAlterTableFunctionBody body = parseAlterTableFunctionBody();
+        return new AstAlterTableFunction(hasIfExistPrefix, tableName, body);
+    }
+
+    private AstAlterTableFunctionBody parseAlterTableFunctionBody() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        if (currentToken.getBody().equalsIgnoreCase("add")) {
+            return parseAddColumnFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("drop")) {
+            return parseDropColumnFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("rename")) {
+            return parseRenameFunction();
+        } else {
+            throw new SyntaxException("Alter table command", currentToken.getBody(), currentToken.getLine(), currentToken.getPosition());
+        }
+    }
+
+    private AstRenameFunction parseRenameFunction() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("rename");
+        nextToken();
+
+        assertTokenType(Tokens.keywordType);
+        if (currentToken.getBody().equalsIgnoreCase("column")) {
+            return parseRenameColumnFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("table")) {
+            return parseRenameTableFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("index")) {
+            return parseRenameIndexFunction();
+        } else {
+            throw new SyntaxException("Alter table rename command", currentToken.getBody(), currentToken.getLine(), currentToken.getPosition());
+        }
+    }
+
+    private AstRenameIndexFunction parseRenameIndexFunction() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("index");
+        nextToken();
+        boolean hasIfExistPrefix = parseIfExistPrefix();
+        AstIndexName oldName = parseIndexName();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("to");
+        nextToken();
+        AstIndexName newName = parseIndexName();
+        return new AstRenameIndexFunction(hasIfExistPrefix, oldName, newName);
+    }
+
+    private AstRenameTableFunction parseRenameTableFunction() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("table");
+        nextToken();
+        boolean hasIfExistPrefix = parseIfExistPrefix();
+        AstTableName oldName = parseTableName();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("to");
+        nextToken();
+        AstTableName newName = parseTableName();
+        return new AstRenameTableFunction(hasIfExistPrefix, oldName, newName);
+    }
+
+    private AstRenameColumnFunction parseRenameColumnFunction() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("column");
+        nextToken();
+        boolean hasIfExistPrefix = parseIfExistPrefix();
+        AstFieldName oldField = parseFieldName();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("to");
+        nextToken();
+        AstFieldName newField = parseFieldName();
+        return new AstRenameColumnFunction(hasIfExistPrefix, oldField, newField);
+    }
+
+    private AstDropColumnFunction parseDropColumnFunction() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("drop");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("column");
+        nextToken();
+        boolean hasIfExistPrefix = parseIfExistPrefix();
+        AstFieldName fieldName = parseFieldName();
+        return new AstDropColumnFunction(hasIfExistPrefix, fieldName);
+    }
+
+    private AstAddColumnFunction parseAddColumnFunction() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("add");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("column");
+        nextToken();
+        boolean hasIfNotExistPrefix = parseIfNotExistPrefix();
+        AstColumnDefinition columnDefinition = parseColumnDefinition();
+        return new AstAddColumnFunction(hasIfNotExistPrefix, columnDefinition);
+    }
+
     private AstCreateTableFunction parseCreateTableFunction() throws SyntaxException {
         assertTokenType(Tokens.keywordType);
         assertTokenBody("create");
@@ -81,8 +190,7 @@ public class Parser implements IParser {
         boolean hasIfNotExistPrefix = parseIfNotExistPrefix();
         AstTableName tableName = parseTableName();
         List<AstColumnDefinition> columnDefinitionList = parseCreateTableFunctionBody();
-
-        return null;
+        return new AstCreateTableFunction(hasIfNotExistPrefix, tableName, columnDefinitionList);
     }
 
     private List<AstColumnDefinition> parseCreateTableFunctionBody() throws SyntaxException {
@@ -92,8 +200,22 @@ public class Parser implements IParser {
 
         List<AstColumnDefinition> columnDefinitionList = new ArrayList<>();
         for (;;) {
-            //todo
+            AstColumnDefinition columnDefinition = parseColumnDefinition();
+            columnDefinitionList.add(columnDefinition);
+
+            assertTokenType(Tokens.operatorType);
+            if (currentToken.getBody().equalsIgnoreCase(")")) {
+                break;
+            }
+
+            assertTokenBody(",");
+            nextToken();
         }
+
+        assertTokenType(Tokens.operatorType);
+        assertTokenBody(")");
+        nextToken();
+        return columnDefinitionList;
     }
 
     private AstColumnDefinition parseColumnDefinition() throws SyntaxException {
@@ -103,9 +225,98 @@ public class Parser implements IParser {
         return new AstColumnDefinition(fieldName, type, constraint);
     }
 
-    private AstConstraint parseConstraint() {
-        //todo
-        return null;
+    private AstConstraint parseConstraint() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        if (currentToken.getBody().equalsIgnoreCase("primary")) {
+            return parsePrimaryKeyConstraint();
+        } else if (currentToken.getBody().equalsIgnoreCase("foreign")) {
+            return parseForeignKeyConstraint();
+        } else if (currentToken.getBody().equalsIgnoreCase("unique")) {
+            return parseUniqueConstraint();
+        } else if (currentToken.getBody().equalsIgnoreCase("not")) {
+            return parseNotNullConstraint();
+        } else if (currentToken.getBody().equalsIgnoreCase("default")) {
+            return parseDefaultConstraint();
+        } else {
+            throw new SyntaxException("Constraint", currentToken.getBody(), currentToken.getLine(), currentToken.getPosition());
+        }
+    }
+
+    private AstDefaultConstraint parseDefaultConstraint() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("default");
+        nextToken();
+        AstValue value = parseValue();
+        return new AstDefaultConstraint(value);
+    }
+
+    private AstValue parseValue() throws SyntaxException {
+        if (currentToken.getType().equalsIgnoreCase(Tokens.stringType)) {
+            nextToken();
+            return new AstStringValue(currentToken.getBody());
+        } else if (currentToken.getType().equalsIgnoreCase(Tokens.symbolType)) {
+            SymbolToken symbolToken = (SymbolToken) currentToken;
+            nextToken();
+            return new AstSymbolValue(symbolToken.getChar());
+        } else if (currentToken.getType().equalsIgnoreCase(Tokens.floatingNumberType)) {
+            FloatingNumberToken floatingNumberToken = (FloatingNumberToken) currentToken;
+            nextToken();
+            return new AstFloatingNumberValue(floatingNumberToken.getNumber());
+        } else if (currentToken.getType().equalsIgnoreCase(Tokens.integerNumberType)) {
+            IntegerNumberToken integerNumberToken = (IntegerNumberToken) currentToken;
+            nextToken();
+            return new AstIntegerNumberValue(integerNumberToken.getNumber());
+        } else {
+            throw new SyntaxException("Value", currentToken.getBody(), currentToken.getLine(), currentToken.getPosition());
+        }
+    }
+
+    private AstNotNullConstraint parseNotNullConstraint() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("not");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("null");
+        nextToken();
+        return new AstNotNullConstraint();
+    }
+
+    private AstUniqueConstraint parseUniqueConstraint() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("unique");
+        nextToken();
+        return new AstUniqueConstraint();
+    }
+
+    private AstForeignKeyConstraint parseForeignKeyConstraint() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("foreign");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("key");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("references");
+        nextToken();
+        AstTableName tableName = parseTableName();
+        assertTokenType(Tokens.operatorType);
+        assertTokenBody("(");
+        nextToken();
+        AstFieldName fieldName = parseFieldName();
+        assertTokenType(Tokens.operatorType);
+        assertTokenBody(")");
+        nextToken();
+        return new AstForeignKeyConstraint(tableName, fieldName);
+    }
+
+    private AstPrimaryKeyConstraint parsePrimaryKeyConstraint() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("primary");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("key");
+        nextToken();
+        return new AstPrimaryKeyConstraint();
     }
 
     private AstType parseType() throws SyntaxException {
@@ -120,6 +331,13 @@ public class Parser implements IParser {
         AstFieldName fieldName = new AstFieldName(currentToken.getBody());
         nextToken();
         return fieldName;
+    }
+
+    private AstIndexName parseIndexName() throws SyntaxException {
+        assertTokenType(Tokens.identifierType);
+        AstIndexName indexName = new AstIndexName(currentToken.getBody());
+        nextToken();
+        return indexName;
     }
 
     private AstTableName parseTableName() throws SyntaxException {
@@ -144,6 +362,19 @@ public class Parser implements IParser {
             nextToken();
             assertTokenType(Tokens.keywordType);
             assertTokenBody("not");
+            nextToken();
+            assertTokenType(Tokens.keywordType);
+            assertTokenBody("exists");
+            nextToken();
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private boolean parseIfExistPrefix() throws SyntaxException {
+        if (currentToken.getType().equalsIgnoreCase(Tokens.keywordType)
+                && currentToken.getBody().equalsIgnoreCase("if")) {
             nextToken();
             assertTokenType(Tokens.keywordType);
             assertTokenBody("exists");

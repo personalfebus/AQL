@@ -55,4 +55,8 @@ public class FloatingNumberToken implements Token {
     public int getPosition() {
         return position;
     }
+
+    public double getNumber() {
+        return number;
+    }
 }
