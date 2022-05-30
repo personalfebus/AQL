@@ -6,9 +6,32 @@ create table if not exists bmstu.students (
    identity_code string unique
 );
 
-alter table if exists bmstu.students set
-    identity_code = "18U726",
-    name = "Gleb"
-where id = 89883;
+alter table if exists bmstu.students
+add column rank123 long not null;
+
+alter table if exists bmstu.students
+rename rable rank123 to rank;
 
 drop table if exists bmstu.students;
+
+icreate index if not exists students_rank_idx
+on bmstu.student(rank) using btree;
+
+idrop index it exists students_rank_idx
+from table bmstu.students;
+
+insert into bmstu.students
+(name, surname, patronymic, rank, identity_code) values
+("Gleb", "Zavyalov", "Olegovich", 9, "18u726"),
+("Andrey", "Zvorigin", "Valerevich", 3, "18u727");
+
+update table if exists bmstu.students set
+    identity_code = "18K733",
+    name = "Egor"
+where id = 89883;
+
+delete from bmstu.students
+where id > 0 and (rank < 100 or patronymic = "");
+
+select id, rank, name, surname, id/rank from bmstu.students
+where (id > 10 or rank < 15) and (name != "Gleb");
