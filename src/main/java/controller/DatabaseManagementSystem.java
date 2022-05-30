@@ -16,8 +16,6 @@ import java.util.List;
  * Контроллер СУБД
  */
 public class DatabaseManagementSystem {
-    //todo add gradle logger dependency
-
     public static void main(String[] args) throws IOException {
         List<Field> fields = new ArrayList<>();
         fields.add(new IntField(5));

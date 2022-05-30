@@ -9,4 +9,4 @@ keyword := type_keyword | "if" | "not" | "exists" | "crate" | "table" | "primary
           | "rename" | "to" | "index" | "insert" | "into" | "values" | "update" | "set"
           | "where" | "and" | "or" | "delete" | "from" | "on" | "using" | "btree" | "hash"
           | "select" | "as".
-type_keyword := "int" | "serial" | "long" | "bigserial" | "double" | "string" | "timestamp".
+type_keyword := "int" | "serial" | "long" | "bigserial" | "double" | "string" | "char" | "timestamp".

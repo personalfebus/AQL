@@ -205,7 +205,9 @@ public class Lexer implements ILexer {
                 word.equalsIgnoreCase("btree") ||
                 word.equalsIgnoreCase("hash") ||
                 word.equalsIgnoreCase("select") ||
-                word.equalsIgnoreCase( "as")
+                word.equalsIgnoreCase( "as") ||
+                word.equalsIgnoreCase("icreate") ||
+                word.equalsIgnoreCase("idrop")
                 ;
     }
 

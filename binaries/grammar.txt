@@ -45,23 +45,27 @@ columns_list := field_name "," column_list | .
 insert_function_values_block := "(" insert_function_values_list ")" "," insert_function_values_block | .
 insert_function_values_list := value "," insert_function_values_list | .
 
-update_function := "update" table_name "set" field_name "=" value update_function_postfix.
+update_function := "update" table_name "set" update_function_set_list condition_postfix.
+update_function_set_list := field_name "=" value "," update_function_set_list | field_name "=" value.
 condition_postfix := "where" condition.
 
-condition := condition_and_block.
+condition := condition_head.
+condition_head := "not" condition_and_block | condition_and_block.
 condition_and_block := condition_or_block "and" condition_and_block | condition_or_block .
 condition_or_block := condition_comparison_block "or" condition_or_block | condition_comparison_block.
-condition_comparison_block := condition_comparison_arith ">" condition_comparison_arith
-                            | condition_comparison_arith "<" condition_comparison_arith
-                            | condition_comparison_arith "=" condition_comparison_arith
-                            | condition_comparison_arith ">=" condition_comparison_arith
-                            | condition_comparison_arith "<=" condition_comparison_arith
-                            | "(" condition ")".
-condition_comparison_arith := condition_comparison_values "+" condition_comparison_values
-                            | condition_comparison_values "-" condition_comparison_values
-                            | condition_comparison_values "*" condition_comparison_values
-                            | condition_comparison_values "/" condition_comparison_values
-                            | "(" condition_comparison_arith ")".
+condition_comparison_block := arithmetic_expr_head ">" arithmetic_expr_head
+                            | arithmetic_expr_head "<" arithmetic_expr_head
+                            | arithmetic_expr_head "=" arithmetic_expr_head
+                            | arithmetic_expr_head ">=" arithmetic_expr_head
+                            | arithmetic_expr_head "<=" arithmetic_expr_head
+                            | "(" condition_head ")".
+
+arithmetic_expr_head := unary_number_operator arithmetic_expr_body | arithmetic_expr_body.
+arithmetic_expr_body := condition_comparison_values arithmetic_expr_tail | <(> arithmetic_expr_head <)>.
+arithmetic_expr_tail := binary_number_operator arithmetic_expr_head | .
+unary_number_operator := <->.
+binary_number_operator := </> | <*> | <+> | <->.
+
 condition_comparison_values := field_name | value.
 
 delete_function := "delete" "from" table_name condition_postfix.
@@ -69,13 +73,13 @@ delete_function := "delete" "from" table_name condition_postfix.
 
 index_functions := create_index_function | drop_index_function.
 
-create_index_function := "create" "index" index_name "on" table_name "(" field_name ")" "using" index_type.
+create_index_function := "icreate" "index" if_not_exists_prefix index_name "on" table_name "(" field_name ")" "using" index_type.
 index_type := "btree" | "hash".
 
-drop_index_function := "drop" "index" if_exists_prefix index_name "from" "table" table_name.
+drop_index_function := "idrop" "index" if_exists_prefix index_name "from" "table" table_name.
 
 query_functions := select_function.
-select_function := "select" select_variable_list "from" table_name "as" table_alias select_function_join_block condition_postfix. //todo add aggregation
+select_function := "select" select_variable_list "from" table_name "as" table_alias select_function_join_block condition_postfix. //to improve aggregation
 select_variable_list := field_reference select_variable_sub_list | "*".
 select_variable_sub_list := "," field_reference select_variable_sub_list | .
 select_function_join_block := .

@@ -4,17 +4,26 @@ import lexer.ILexer;
 import lexer.Lexer;
 import lexer.token.*;
 import parser.ast.AstType;
+import parser.ast.arithmetic.*;
+import parser.ast.condition.AstCondition;
+import parser.ast.condition.AstConditionConstantRValue;
+import parser.ast.condition.AstConditionOperator;
 import parser.ast.constraint.*;
 import parser.ast.function.AstFunction;
 import parser.ast.AstProgram;
 import parser.ast.function.AstColumnDefinition;
+import parser.ast.function.data.*;
+import parser.ast.function.index.AstCreateIndexFunction;
+import parser.ast.function.index.AstDropIndexFunction;
+import parser.ast.function.query.AstSelectFunction;
 import parser.ast.function.table.AstAlterTableFunction;
 import parser.ast.function.table.AstCreateTableFunction;
+import parser.ast.function.table.AstDropTableFunction;
 import parser.ast.function.table.alter.*;
-import parser.ast.name.AstFieldName;
-import parser.ast.name.AstIndexName;
-import parser.ast.name.AstTableName;
+import parser.ast.name.*;
 import parser.ast.value.*;
+import parser.exception.BadArithmeticExpressionException;
+import parser.exception.BadConditionExpressionException;
 import parser.exception.SyntaxException;
 
 import java.util.ArrayList;
@@ -41,11 +50,11 @@ public class Parser implements IParser {
     }
 
     @Override
-    public AstProgram parse(String input) throws SyntaxException {
+    public AstProgram parse(String input) throws SyntaxException, BadArithmeticExpressionException, BadConditionExpressionException {
         return parseProgram();
     }
 
-    private AstProgram parseProgram() throws SyntaxException {
+    private AstProgram parseProgram() throws SyntaxException, BadArithmeticExpressionException, BadConditionExpressionException {
         nextToken();
         AstProgram program = new AstProgram();
 
@@ -61,17 +70,243 @@ public class Parser implements IParser {
         return program;
     }
 
-    //todo interface subclasses + parse
-    private AstFunction parseFunction() throws SyntaxException {
+    private AstFunction parseFunction() throws SyntaxException, BadArithmeticExpressionException, BadConditionExpressionException {
         assertTokenType(Tokens.keywordType);
 
         if (currentToken.getBody().equalsIgnoreCase("create")) {
             return parseCreateTableFunction();
         } else if (currentToken.getBody().equalsIgnoreCase("alter")) {
             return parseAlterTableFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("drop")) {
+            return parseDropTableFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("insert")) {
+            return parseInsertFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("update")) {
+            return parseUpdateFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("delete")) {
+            return parseDeleteFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("icreate")) {
+            return parseCreateIndexFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("idrop")) {
+            return parseDropIndexFunction();
+        } else if (currentToken.getBody().equalsIgnoreCase("select")) {
+            return parseSelectFunction();
+        }  else {
+            throw new SyntaxException("Function command", currentToken.getBody(), currentToken.getLine(), currentToken.getPosition());
+        }
+    }
+
+    private AstSelectFunction parseSelectFunction() throws SyntaxException, BadArithmeticExpressionException, BadConditionExpressionException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("select");
+        nextToken();
+        List<AstFieldName> columnList = parseColumnList();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("from");
+        nextToken();
+        AstTableName tableName = parseTableName();
+//        assertTokenType(Tokens.keywordType); to add here
+//        assertTokenBody("as");
+//        nextToken();
+        AstCondition condition = parseConditionPostfix();
+        return new AstSelectFunction(columnList, tableName, condition);
+    }
+
+    private AstDropIndexFunction parseDropIndexFunction() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("idrop");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("index");
+        nextToken();
+        boolean hasIfExistPrefix = parseIfExistPrefix();
+        AstIndexName indexName = parseIndexName();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("from");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("table");
+        nextToken();
+        AstTableName tableName = parseTableName();
+        return new AstDropIndexFunction(hasIfExistPrefix, indexName, tableName);
+    }
+
+    private AstCreateIndexFunction parseCreateIndexFunction() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("icreate");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("index");
+        nextToken();
+        boolean hasIfNotExistPrefix = parseIfNotExistPrefix();
+        AstIndexName indexName = parseIndexName();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("on");
+        nextToken();
+        AstTableName tableName = parseTableName();
+        assertTokenType(Tokens.operatorType);
+        assertTokenBody("(");
+        nextToken();
+        AstFieldName fieldName = parseFieldName();
+        assertTokenType(Tokens.operatorType);
+        assertTokenBody(")");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("using");
+        nextToken();
+        AstIndexType indexType = parseIndexType();
+        return new AstCreateIndexFunction(hasIfNotExistPrefix, indexName, tableName, fieldName, indexType);
+    }
+
+    private AstDeleteFunction parseDeleteFunction() throws SyntaxException, BadArithmeticExpressionException, BadConditionExpressionException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("delete");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("from");
+        nextToken();
+        AstTableName tableName = parseTableName();
+        AstCondition condition = parseConditionPostfix();
+        return new AstDeleteFunction(tableName, condition);
+    }
+
+    private AstUpdateFunction parseUpdateFunction() throws SyntaxException, BadArithmeticExpressionException, BadConditionExpressionException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("update");
+        nextToken();
+        AstTableName tableName = parseTableName();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("set");
+        nextToken();
+        List<AstUpdateValue> updateValueList = parseUpdateFunctionSetList();
+        AstCondition condition = parseConditionPostfix();
+        return new AstUpdateFunction(tableName, updateValueList, condition);
+    }
+
+    private AstCondition parseConditionPostfix() throws SyntaxException, BadArithmeticExpressionException, BadConditionExpressionException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("where");
+        nextToken();
+        return parseCondition();
+    }
+
+    private List<AstUpdateValue> parseUpdateFunctionSetList() throws SyntaxException {
+        List<AstUpdateValue> updateValueList = new ArrayList<>();
+
+        for (;;) {
+            AstFieldName fieldName = parseFieldName();
+            AstValue value = parseValue();
+            updateValueList.add(new AstUpdateValue(fieldName, value));
+
+            if (!currentToken.getType().equalsIgnoreCase(Tokens.operatorType)
+                    || !currentToken.getBody().equalsIgnoreCase(",")) {
+                break;
+            }
+            nextToken();
         }
 
-        return null;
+        return updateValueList;
+    }
+
+    private AstInsertFunction parseInsertFunction() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("insert");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("into");
+        nextToken();
+        AstTableName tableName = parseTableName();
+        assertTokenType(Tokens.operatorType);
+        assertTokenBody("(");
+        nextToken();
+        List<AstFieldName> columnList = parseColumnList();
+        assertTokenType(Tokens.operatorType);
+        assertTokenBody(")");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("values");
+        nextToken();
+        List<AstInsertRow> rowList = parseInsertFunctionBody(columnList.size());
+        return new AstInsertFunction(tableName, columnList, rowList);
+    }
+
+    private List<AstInsertRow> parseInsertFunctionBody(int numberOfFields) throws SyntaxException {
+        List<AstInsertRow> rowList = new ArrayList<>();
+
+        for (;;) {
+            assertTokenType(Tokens.operatorType);
+            assertTokenBody("(");
+            nextToken();
+
+            AstInsertRow row = new AstInsertRow(parseValueList());
+
+            assertTokenType(Tokens.operatorType);
+            assertTokenBody(")");
+            nextToken();
+
+            if (!currentToken.getType().equalsIgnoreCase(Tokens.operatorType)
+                    || !currentToken.getBody().equalsIgnoreCase(",")) {
+                break;
+            }
+            nextToken();
+        }
+
+        return rowList;
+    }
+
+    private List<AstValue> parseValueList(int numberOfFields) throws SyntaxException {
+        List<AstValue> valueList = new ArrayList<>();
+
+        for (int i = 0; i < numberOfFields; i++) {
+            valueList.add(parseValue());
+            nextToken();
+        }
+
+        return valueList;
+    }
+
+    private List<AstValue> parseValueList() throws SyntaxException {
+        List<AstValue> valueList = new ArrayList<>();
+
+        for (;;) {
+            valueList.add(parseValue());
+
+            if (!currentToken.getType().equalsIgnoreCase(Tokens.operatorType)
+                    || !currentToken.getBody().equalsIgnoreCase(",")) {
+                break;
+            }
+            nextToken();
+        }
+
+        return valueList;
+    }
+
+    private List<AstFieldName> parseColumnList() throws SyntaxException {
+        List<AstFieldName> columnList = new ArrayList<>();
+
+        for (;;) {
+            columnList.add(parseFieldName());
+
+            if (!currentToken.getType().equalsIgnoreCase(Tokens.operatorType)
+                    || !currentToken.getBody().equalsIgnoreCase(",")) {
+                break;
+            }
+            nextToken();
+        }
+
+        return columnList;
+    }
+
+    private AstDropTableFunction parseDropTableFunction() throws SyntaxException {
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("drop");
+        nextToken();
+        assertTokenType(Tokens.keywordType);
+        assertTokenBody("table");
+        nextToken();
+        boolean hasIfExistPrefix = parseIfExistPrefix();
+        AstTableName tableName = parseTableName();
+        return new AstDropTableFunction(hasIfExistPrefix, tableName);
     }
 
     private AstAlterTableFunction parseAlterTableFunction() throws SyntaxException {
@@ -319,11 +554,183 @@ public class Parser implements IParser {
         return new AstPrimaryKeyConstraint();
     }
 
+    //todo check
+    private AstCondition parseCondition() throws BadConditionExpressionException, BadArithmeticExpressionException, SyntaxException {
+        AstCondition condition = new AstCondition();
+        parseConditionHead(condition);
+        condition.emptyStack();
+        return condition;
+    }
+
+    private void parseConditionHead(AstCondition condition) throws BadConditionExpressionException, BadArithmeticExpressionException, SyntaxException {
+        if (currentToken.getType().equalsIgnoreCase(Tokens.keywordType)
+                && currentToken.getBody().equalsIgnoreCase("not")) {
+            condition.addPart(new AstConditionOperator("!"));
+            nextToken();
+        }
+
+        parseConditionAndBlock(condition);
+    }
+
+    private void parseConditionAndBlock(AstCondition condition) throws BadArithmeticExpressionException, SyntaxException, BadConditionExpressionException {
+        parseConditionOrBlock(condition);
+
+        if (currentToken.getType().equalsIgnoreCase(Tokens.keywordType)
+                && currentToken.getBody().equalsIgnoreCase("and")) {
+            condition.addPart(new AstConditionOperator("&&"));
+            nextToken();
+            parseConditionAndBlock(condition);
+        }
+    }
+
+    private void parseConditionOrBlock(AstCondition condition) throws BadArithmeticExpressionException, SyntaxException, BadConditionExpressionException {
+        parseConditionComparisonBlock(condition);
+
+        if (currentToken.getType().equalsIgnoreCase(Tokens.keywordType)
+                && currentToken.getBody().equalsIgnoreCase("or")) {
+            condition.addPart(new AstConditionOperator("||"));
+            nextToken();
+            parseConditionOrBlock(condition);
+        }
+    }
+
+    private void parseConditionComparisonBlock(AstCondition condition) throws BadArithmeticExpressionException, SyntaxException, BadConditionExpressionException {
+        if (currentToken.getType().equalsIgnoreCase(Tokens.operatorType)
+                && currentToken.getBody().equalsIgnoreCase("(")) {
+            nextToken();
+            parseConditionHead(condition);
+            assertTokenType(Tokens.operatorType);
+            assertTokenBody(")");
+            nextToken();
+        } else {
+            AstArithExpr first = parseArithExpr();
+            condition.addPart(new AstConditionConstantRValue(first));
+            assertTokenType(Tokens.operatorType);
+
+            if (currentToken.getBody().equalsIgnoreCase(">")) {
+                condition.addPart(new AstConditionOperator(currentToken.getBody()));
+            } else if (currentToken.getBody().equalsIgnoreCase("<")) {
+                condition.addPart(new AstConditionOperator(currentToken.getBody()));
+            } else if (currentToken.getBody().equalsIgnoreCase("=")) {
+                condition.addPart(new AstConditionOperator(currentToken.getBody()));
+            } else if (currentToken.getBody().equalsIgnoreCase(">=")) {
+                condition.addPart(new AstConditionOperator(currentToken.getBody()));
+            } else if (currentToken.getBody().equalsIgnoreCase("<=")) {
+                condition.addPart(new AstConditionOperator(currentToken.getBody()));
+            } else {
+                throw new SyntaxException("Comparison operator", currentToken.getBody(), currentToken.getLine(), currentToken.getPosition());
+            }
+
+            nextToken();
+            AstArithExpr second = parseArithExpr();
+            condition.addPart(new AstConditionConstantRValue(second));
+        }
+    }
+
+    //todo check
+    private AstArithExpr parseArithExpr() throws BadArithmeticExpressionException, SyntaxException {
+        AstArithExpr arithExpr = new AstArithExpr();
+        parseArithExprHead(arithExpr);
+        arithExpr.emptyStack();
+        return arithExpr;
+    }
+
+    private void parseArithExprHead(AstArithExpr arithExpr) throws BadArithmeticExpressionException, SyntaxException {
+        if (currentToken.getType().equalsIgnoreCase(Tokens.operatorType)
+                && currentToken.getBody().equalsIgnoreCase("-")) {
+            arithExpr.addPart(new AstArithExprOperator('-', 1));
+            nextToken();
+        }
+        parseArithExprBody(arithExpr);
+    }
+
+    private void parseArithExprBody(AstArithExpr arithExpr) throws BadArithmeticExpressionException, SyntaxException {
+        if (currentToken.getType().equalsIgnoreCase(Tokens.stringType)) {
+            //string
+            AstValue value = parseValue();
+            arithExpr.addPart(new AstArithExprValue(value));
+        } else if (currentToken.getType().equalsIgnoreCase(Tokens.symbolType)) {
+            //symbol
+            AstValue value = parseValue();
+            arithExpr.addPart(new AstArithExprValue(value));
+        } else if (currentToken.getType().equalsIgnoreCase(Tokens.integerNumberType)) {
+            //integer and long
+            AstValue value = parseValue();
+            arithExpr.addPart(new AstArithExprValue(value));
+        } else if (currentToken.getType().equalsIgnoreCase(Tokens.floatingNumberType)) {
+            //double
+            AstValue value = parseValue();
+            arithExpr.addPart(new AstArithExprValue(value));
+        } else if (currentToken.getType().equalsIgnoreCase(Tokens.identifierType)) {
+            //field reference
+            AstFieldReference fieldReference = parseFieldReference();
+            arithExpr.addPart(new AstArithExprIdentConstant(fieldReference));
+        } else if (currentToken.getType().equalsIgnoreCase(Tokens.operatorType)) {
+            if (currentToken.getBody().equalsIgnoreCase("(")) {
+                // <(> arith_expr <)>
+                arithExpr.addPart(new AstArithExprSeparator("SEPARATOR_OPEN"));
+                nextToken();
+                parseArithExprHead(arithExpr);
+                assertTokenType(Tokens.operatorType);
+                assertTokenBody(")");
+                arithExpr.addPart(new AstArithExprSeparator("SEPARATOR_CLOSE"));
+                nextToken();
+            } else {
+                throw new SyntaxException("Arithmetic expression part", currentToken.getBody(), currentToken.getLine(), currentToken.getPosition());
+            }
+        } else {
+            throw new SyntaxException("Arithmetic expression part", currentToken.getBody(), currentToken.getLine(), currentToken.getPosition());
+        }
+
+        parseArithExprTail(arithExpr);
+    }
+
+    private void parseArithExprTail(AstArithExpr arithExpr) throws BadArithmeticExpressionException, SyntaxException {
+        if (currentToken.getType().equalsIgnoreCase(Tokens.operatorType)) {
+            //binary op </> | <*> | <+> | <->.
+            if (currentToken.getBody().equalsIgnoreCase("*")) {
+                arithExpr.addPart(new AstArithExprOperator('*', 2));
+            } else if (currentToken.getBody().equalsIgnoreCase("/")) {
+                arithExpr.addPart(new AstArithExprOperator('/', 2));
+            } else if (currentToken.getBody().equalsIgnoreCase("+")) {
+                arithExpr.addPart(new AstArithExprOperator('+', 2));
+            } else if (currentToken.getBody().equalsIgnoreCase("-")) {
+                arithExpr.addPart(new AstArithExprOperator('-', 2));
+            }
+            nextToken();
+            parseArithExprHead(arithExpr);
+        }
+    }
+
     private AstType parseType() throws SyntaxException {
         assertTokenType(Tokens.identifierType);
-        AstType type = new AstType(currentToken.getBody());
-        nextToken();
-        return type;
+
+        if (currentToken.getBody().equalsIgnoreCase("int")
+        || currentToken.getBody().equalsIgnoreCase("serial")
+        || currentToken.getBody().equalsIgnoreCase("long")
+        || currentToken.getBody().equalsIgnoreCase("bigserial")
+        || currentToken.getBody().equalsIgnoreCase("double")
+        || currentToken.getBody().equalsIgnoreCase("string")
+        || currentToken.getBody().equalsIgnoreCase("char")) {
+            AstType type = new AstType(currentToken.getBody());
+            nextToken();
+            return type;
+        } else {
+            throw new SyntaxException("Type", currentToken.getBody(), currentToken.getLine(), currentToken.getPosition());
+        }
+    }
+
+    private AstIndexType parseIndexType() throws SyntaxException {
+        assertTokenType(Tokens.identifierType);
+
+        if (currentToken.getBody().equalsIgnoreCase("btree")
+        || currentToken.getBody().equalsIgnoreCase("hash")) {
+            AstIndexType type = new AstIndexType(currentToken.getBody());
+            nextToken();
+            return type;
+        } else {
+            throw new SyntaxException("Index type", currentToken.getBody(), currentToken.getLine(), currentToken.getPosition());
+        }
     }
 
     private AstFieldName parseFieldName() throws SyntaxException {
@@ -331,6 +738,10 @@ public class Parser implements IParser {
         AstFieldName fieldName = new AstFieldName(currentToken.getBody());
         nextToken();
         return fieldName;
+    }
+
+    private AstFieldReference parseFieldReference() throws SyntaxException {
+        return new AstFieldReference(parseFieldName());
     }
 
     private AstIndexName parseIndexName() throws SyntaxException {
@@ -345,7 +756,7 @@ public class Parser implements IParser {
         String first = currentToken.getBody();
         nextToken();
         if (currentToken.getType().equalsIgnoreCase(Tokens.operatorType)
-        && currentToken.getBody().equalsIgnoreCase(".")) {
+                && currentToken.getBody().equalsIgnoreCase(".")) {
             nextToken();
             assertTokenType(Tokens.identifierType);
             String second = currentToken.getBody();
@@ -358,7 +769,7 @@ public class Parser implements IParser {
 
     private boolean parseIfNotExistPrefix() throws SyntaxException {
         if (currentToken.getType().equalsIgnoreCase(Tokens.keywordType)
-        && currentToken.getBody().equalsIgnoreCase("if")) {
+                && currentToken.getBody().equalsIgnoreCase("if")) {
             nextToken();
             assertTokenType(Tokens.keywordType);
             assertTokenBody("not");
