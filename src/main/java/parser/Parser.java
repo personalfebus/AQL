@@ -248,6 +248,7 @@ public class Parser implements IParser {
             nextToken();
 
             AstInsertRow row = new AstInsertRow(parseValueList());
+            rowList.add(row);
 
             assertTokenType(Tokens.operatorType);
             assertTokenBody(")");

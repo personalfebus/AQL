@@ -15,6 +15,6 @@ public class AstFloatingNumberValue implements AstValue {
 
     @Override
     public String getType() {
-        return AstForeignKeyConstraint.class.getName();
+        return "double";
     }
 }

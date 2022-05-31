@@ -119,7 +119,12 @@ public class Fields {
                 throw new TypeMismatchException();
             }
         } else {
-            throw new TypeMismatchException();
+            if (desiredClass.equals("int") && value.getType().equals("long")) {
+                AstIntegerNumberValue tmp = (AstIntegerNumberValue) value;
+                return new IntField((int)tmp.getValue());
+            } else {
+                throw new TypeMismatchException();
+            }
         }
     }
 }

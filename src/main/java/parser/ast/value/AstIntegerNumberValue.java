@@ -13,6 +13,6 @@ public class AstIntegerNumberValue implements AstValue {
 
     @Override
     public String getType() {
-        return AstIntegerNumberValue.class.getName();
+        return "long";
     }
 }

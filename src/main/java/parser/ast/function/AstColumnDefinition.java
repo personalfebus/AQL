@@ -1,6 +1,9 @@
 package parser.ast.function;
 
 import database.structures.TableFieldInformation;
+import database.structures.value.BigSerialDefaultValue;
+import database.structures.value.IntFieldDefaultValue;
+import database.structures.value.SerialDefaultValue;
 import parser.ast.AstType;
 import parser.ast.constraint.AstConstraint;
 import parser.ast.name.AstFieldName;
@@ -36,9 +39,17 @@ public class AstColumnDefinition {
     }
 
     public TableFieldInformation getInformation() throws TypeMismatchException {
-        TableFieldInformation information = new TableFieldInformation(name.getName(), type.getTypeName());
+        TableFieldInformation information = new TableFieldInformation(name.getName(), type.getMappedName());
         if (constraint != null) {
             constraint.emplaceConstraint(information, type);
+        }
+
+        if (type.isSerial()) {
+            if (type.getMappedName().equals("int")) {
+                information.setDefaultValue(new SerialDefaultValue());
+            } else if (type.getMappedName().equals("long")) {
+                information.setDefaultValue(new BigSerialDefaultValue());
+            }
         }
         return information;
     }

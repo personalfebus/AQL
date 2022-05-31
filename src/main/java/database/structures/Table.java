@@ -1,6 +1,7 @@
 package database.structures;
 
 import database.btree.BTree;
+import database.btree.Entry;
 import database.exception.FieldNumberMismatchException;
 import database.exception.NotNullFieldNotInsideInsertException;
 import database.exception.TypeMismatchException;
@@ -10,6 +11,7 @@ import database.field.Fields;
 import database.structures.value.BigSerialDefaultValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import parser.ast.condition.AstCondition;
 import parser.ast.function.data.AstInsertRow;
 import parser.ast.name.AstFieldName;
 
@@ -58,31 +60,7 @@ public class Table {
     }
 
     public void insertValues(List<AstFieldName> columnList, List<AstInsertRow> rowList) throws UnknownFieldException, FieldNumberMismatchException, TypeMismatchException, NotNullFieldNotInsideInsertException {
-        List<Integer> positionConverter = new ArrayList<>();
-        int j = 0;
-
-        for (AstFieldName fieldName : columnList) {
-            boolean isPresent = false;
-            int i = 0;
-
-            for (TableFieldInformation tableFieldInformation : fieldInformation) {
-                if (fieldName.getName().equals(tableFieldInformation.getFieldName())) {
-                    tableFieldInformation.setPresentInInsert(true);
-                    tableFieldInformation.setInsertPosition(j);
-                    positionConverter.add(i);
-                    isPresent = true;
-                    break;
-                }
-
-                i++;
-            }
-
-            if (!isPresent) {
-                throw new UnknownFieldException(i);
-            }
-
-            j++;
-        }
+        assertColumnList(columnList);
 
         for (AstInsertRow insertRow : rowList) {
             if (insertRow.getValueList().size() != columnList.size()) {
@@ -102,10 +80,15 @@ public class Table {
                     if (fieldInformation.get(i).isNotNull()) {
                         throw new NotNullFieldNotInsideInsertException(i);
                     } else {
-                        if (fieldInformation.get(i).isPrimary() && !fieldInformation.get(i).hasFieldDefaultValue()) {
-                            throw new NotNullFieldNotInsideInsertException(i);
+                        if (fieldInformation.get(i).isPrimary()) {
+                            if (!fieldInformation.get(i).hasFieldDefaultValue()) {
+                                throw new NotNullFieldNotInsideInsertException(i);
+                            } else {
+                                forInsertKey = fieldInformation.get(i).getDefaultValue();
+                            }
+                        } else {
+                            forInsertValues[i] = fieldInformation.get(i).getDefaultValue();
                         }
-                        forInsertValues[i] = fieldInformation.get(i).getDefaultValue();
                     }
                 }
             }
@@ -115,8 +98,43 @@ public class Table {
             }
             table.insert(forInsertKey, forInsertValues);
         }
+
+        for (TableFieldInformation tableFieldInformation : fieldInformation) {
+            tableFieldInformation.setPresentInInsert(false);
+            tableFieldInformation.setInsertPosition(0);
+        }
     }
 
+    //todo
+    public Entry selectValues(List<AstFieldName> columnList, AstCondition condition) {
+        return null;
+    }
+
+    private void assertColumnList(List<AstFieldName> columnList) throws UnknownFieldException {
+        int j = 0;
+
+        for (AstFieldName fieldName : columnList) {
+            boolean isPresent = false;
+            int i = 0;
+
+            for (TableFieldInformation tableFieldInformation : fieldInformation) {
+                if (fieldName.getName().equals(tableFieldInformation.getFieldName())) {
+                    tableFieldInformation.setPresentInInsert(true);
+                    tableFieldInformation.setInsertPosition(j);
+                    isPresent = true;
+                    break;
+                }
+
+                i++;
+            }
+
+            if (!isPresent) {
+                throw new UnknownFieldException(i);
+            }
+
+            j++;
+        }
+    }
 
 //    public Entry searchEq() {
 //

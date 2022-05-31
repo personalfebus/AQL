@@ -1,10 +1,7 @@
 package parser.ast.constraint;
 
 import database.structures.TableFieldInformation;
-import database.structures.value.CharFieldDefaultValue;
-import database.structures.value.IntFieldDefaultValue;
-import database.structures.value.LongFieldDefaultValue;
-import database.structures.value.StringFieldDefaultValue;
+import database.structures.value.*;
 import parser.ast.AstType;
 import parser.ast.value.*;
 import database.exception.TypeMismatchException;
@@ -33,7 +30,10 @@ public class AstDefaultConstraint implements AstConstraint {
         } else if (value.getType().equalsIgnoreCase(AstValues.astIntegerNumberType)
                 && type.getMappedName().equalsIgnoreCase("long")) {
             information.setDefaultValue(new LongFieldDefaultValue((AstIntegerNumberValue) value));
-        }  else if (value.getType().equalsIgnoreCase(AstValues.astStringType)
+        }  else if (value.getType().equalsIgnoreCase(AstValues.astFloatingNumberType)
+                && type.getMappedName().equalsIgnoreCase("double")) {
+            information.setDefaultValue(new DoubleFieldDefaultValue((AstFloatingNumberValue) value));
+        } else if (value.getType().equalsIgnoreCase(AstValues.astStringType)
                 && type.getMappedName().equalsIgnoreCase("string")) {
             information.setDefaultValue(new StringFieldDefaultValue((AstStringValue) value));
         }  else if (value.getType().equalsIgnoreCase(AstValues.astSymbolType)

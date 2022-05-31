@@ -13,6 +13,6 @@ public class AstStringValue implements AstValue {
 
     @Override
     public String getType() {
-        return AstStringValue.class.getName();
+        return "string";
     }
 }

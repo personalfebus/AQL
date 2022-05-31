@@ -13,6 +13,6 @@ public class AstSymbolValue implements AstValue {
 
     @Override
     public String getType() {
-        return AstSymbolValue.class.getName();
+        return "char";
     }
 }
