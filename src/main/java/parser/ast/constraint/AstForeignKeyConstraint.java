@@ -1,7 +1,10 @@
 package parser.ast.constraint;
 
+import database.structures.TableFieldInformation;
+import parser.ast.AstType;
 import parser.ast.name.AstFieldName;
 import parser.ast.name.AstTableName;
+import database.exception.TypeMismatchException;
 
 public class AstForeignKeyConstraint implements AstConstraint {
     private final AstTableName referencedTableName;
@@ -23,5 +26,11 @@ public class AstForeignKeyConstraint implements AstConstraint {
     @Override
     public String getType() {
         return AstForeignKeyConstraint.class.getName();
+    }
+
+    //todo
+    @Override
+    public void emplaceConstraint(TableFieldInformation information, AstType type) throws TypeMismatchException {
+        information.setForeign(true);
     }
 }

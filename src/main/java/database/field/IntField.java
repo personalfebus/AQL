@@ -11,7 +11,7 @@ public class IntField implements Field, Comparable<Field> {
 
     @Override
     public String getClazz() {
-        return int.class.getName();
+        return "int";
     }
 
     @Override

@@ -1,11 +1,19 @@
 package controller;
 
+import database.Database;
 import database.btree.BTree;
 import database.btree.BTreeNode;
 import database.field.*;
+import database.structures.Table;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import parser.IParser;
 import parser.Parser;
 import parser.ast.AstProgram;
+import parser.ast.function.AstFunction;
+import parser.exception.BadArithmeticExpressionException;
+import parser.exception.BadConditionExpressionException;
+import parser.exception.SyntaxException;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -19,29 +27,43 @@ import java.util.List;
  * Контроллер СУБД
  */
 public class DatabaseManagementSystem {
-    public static void main(String[] args) throws IOException {
-        List<Field> fields = new ArrayList<>();
-        fields.add(new IntField(5));
-        fields.add(new DoubleField(5.01d));
-        fields.add(new LongField(1L));
-        fields.sort(Field::compareTo);
-        System.out.println(fields);
-        Field[][] fields1 = new Field[2][4];
-        fields1[1][2] = new LongField(5L);
-        System.out.println(Arrays.deepToString(fields1));
+    private static final Logger log = LoggerFactory.getLogger(DatabaseManagementSystem.class.getName());
 
-        System.out.println(Double.parseDouble("3.14"));
-
+    public static void main(String[] args) {
+        Database database = new Database();
+        System.out.println("======= Good to work =======");
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-        String input = in.readLine();
+        String input = null;
+
+        try {
+            input = in.readLine();
+        } catch (IOException e) {
+            log.error("Error with stdin",e);
+        }
 
         while (input != null) {
             Path fileName = Path.of("queries/" + input);
-            String queries = Files.readString(fileName);
+            String queries = null;
+            try {
+                queries = Files.readString(fileName);
+            } catch (IOException e) {
+                log.error("Could not find file", e);
+            }
             IParser parser = new Parser(queries);
-            AstProgram program = parser.parse();
+            AstProgram program = null;
+            try {
+                program = parser.parse();
+                program.execute(database);
+            } catch (SyntaxException | BadArithmeticExpressionException | BadConditionExpressionException e) {
+                log.error("Error while parsing queries", e);
+            }
+
             //step to the next input file name
-            input = in.readLine();
+            try {
+                input = in.readLine();
+            } catch (IOException e) {
+                log.error("Error with stdin",e);
+            }
         }
 
 
@@ -64,5 +86,17 @@ public class DatabaseManagementSystem {
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
+
+        List<Field> fields = new ArrayList<>();
+        fields.add(new IntField(5));
+        fields.add(new DoubleField(5.01d));
+        fields.add(new LongField(1L));
+        fields.sort(Field::compareTo);
+        System.out.println(fields);
+        Field[][] fields1 = new Field[2][4];
+        fields1[1][2] = new LongField(5L);
+        System.out.println(Arrays.deepToString(fields1));
+
+        System.out.println(Double.parseDouble("3.14"));
     }
 }

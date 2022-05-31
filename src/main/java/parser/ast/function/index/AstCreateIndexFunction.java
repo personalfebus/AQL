@@ -1,5 +1,6 @@
 package parser.ast.function.index;
 
+import database.Database;
 import parser.ast.function.AstFunction;
 import parser.ast.name.AstFieldName;
 import parser.ast.name.AstIndexName;
@@ -44,5 +45,11 @@ public class AstCreateIndexFunction implements AstFunction {
     @Override
     public String getType() {
         return AstCreateIndexFunction.class.getName();
+    }
+
+    //todo
+    @Override
+    public void execute(Database database) {
+
     }
 }

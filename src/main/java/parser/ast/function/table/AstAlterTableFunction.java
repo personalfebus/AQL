@@ -1,5 +1,6 @@
 package parser.ast.function.table;
 
+import database.Database;
 import parser.ast.function.AstFunction;
 import parser.ast.function.table.alter.AstAlterTableFunctionBody;
 import parser.ast.name.AstTableName;
@@ -30,5 +31,11 @@ public class AstAlterTableFunction implements AstFunction {
     @Override
     public String getType() {
         return AstAlterTableFunction.class.getName();
+    }
+
+    //todo
+    @Override
+    public void execute(Database database) {
+
     }
 }

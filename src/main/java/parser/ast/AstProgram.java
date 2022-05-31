@@ -1,5 +1,6 @@
 package parser.ast;
 
+import database.Database;
 import parser.ast.function.AstFunction;
 
 import java.util.ArrayList;
@@ -18,5 +19,15 @@ public class AstProgram {
 
     public void addFunction(AstFunction function) {
         functions.add(function);
+    }
+
+    public List<AstFunction> getFunctions() {
+        return functions;
+    }
+
+    public void execute(Database database) {
+        for (AstFunction function : functions) {
+            function.execute(database);
+        }
     }
 }

@@ -1,5 +1,6 @@
 package parser.ast.function.table;
 
+import database.Database;
 import parser.ast.function.AstFunction;
 import parser.ast.name.AstTableName;
 
@@ -23,5 +24,11 @@ public class AstDropTableFunction implements AstFunction {
     @Override
     public String getType() {
         return AstDropTableFunction.class.getName();
+    }
+
+    //todo
+    @Override
+    public void execute(Database database) {
+
     }
 }

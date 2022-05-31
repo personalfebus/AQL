@@ -11,7 +11,7 @@ public class LongField implements Field, Comparable<Field> {
 
     @Override
     public String getClazz() {
-        return long.class.getName();
+        return "long";
     }
 
     @Override

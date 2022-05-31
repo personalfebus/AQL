@@ -1,5 +1,6 @@
 package parser.ast.function.query;
 
+import database.Database;
 import parser.ast.condition.AstCondition;
 import parser.ast.function.AstFunction;
 import parser.ast.name.AstFieldName;
@@ -34,5 +35,11 @@ public class AstSelectFunction implements AstFunction {
     @Override
     public String getType() {
         return AstSelectFunction.class.getName();
+    }
+
+    //todo
+    @Override
+    public void execute(Database database) {
+
     }
 }

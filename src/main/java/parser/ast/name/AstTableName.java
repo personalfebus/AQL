@@ -16,4 +16,12 @@ public class AstTableName {
     public String getTableName() {
         return tableName;
     }
+
+    @Override
+    public String toString() {
+        return "AstTableName{" +
+                "schemaName='" + schemaName + '\'' +
+                ", tableName='" + tableName + '\'' +
+                '}';
+    }
 }

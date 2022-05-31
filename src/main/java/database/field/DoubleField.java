@@ -11,7 +11,7 @@ public class DoubleField implements Field, Comparable<Field> {
 
     @Override
     public String getClazz() {
-        return double.class.getName();
+        return "double";
     }
 
     @Override

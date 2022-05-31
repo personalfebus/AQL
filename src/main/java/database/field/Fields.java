@@ -1,16 +1,27 @@
 package database.field;
 
+import database.exception.TypeMismatchException;
+import parser.ast.value.*;
+
 public class Fields {
     public static String getIntClazz() {
-        return int.class.getName();
+        return "int";
     }
 
     public static String getLongClazz() {
-        return long.class.getName();
+        return "long";
     }
 
     public static String getDoubleClazz() {
-        return double.class.getName();
+        return "double";
+    }
+
+    public static String getStringClazz() {
+        return "string";
+    }
+
+    public static String getCharClazz() {
+        return "char";
     }
 
     public static int compare(Field o1, Field o2) {
@@ -41,9 +52,26 @@ public class Fields {
             } else if (c2.equals(getDoubleClazz())) {
                 return compareDoubleAndDouble((DoubleField) o1, (DoubleField) o2);
             }
+        } else if (c1.equals(getStringClazz())) {
+            if (c2.equals(getStringClazz())) {
+                return compareStringAndString((StringField) o1, (StringField) o2);
+            }
+        } else if (c1.equals(getCharClazz())) {
+            //maybe comparable to int?
+            if (c2.equals(getCharClazz())) {
+                return compareCharAndChar((CharField) o1, (CharField) o2);
+            }
         }
 
         throw new IncompatibleClassChangeError("Cannot compare " + c1 + " and " + c2);
+    }
+
+    public static int compareCharAndChar(CharField o1, CharField o2) {
+        return o1.getValue() - o2.getValue();
+    }
+
+    public static int compareStringAndString(StringField o1, StringField o2) {
+        return o1.getValue().compareTo(o2.getValue());
     }
 
     public static int compareIntAndInt(IntField o1, IntField o2) {
@@ -68,5 +96,30 @@ public class Fields {
 
     public static int compareDoubleAndDouble(DoubleField o1, DoubleField o2) {
         return Double.compare(o1.getValue(), o2.getValue());
+    }
+
+    public static Field astValueToField(String desiredClass, AstValue value) throws TypeMismatchException {
+        if (value.getType().equalsIgnoreCase(desiredClass)) {
+            if (value.getType().equals(getIntClazz())) {
+                AstIntegerNumberValue tmp = (AstIntegerNumberValue) value;
+                return new IntField((int)tmp.getValue());
+            } else if (value.getType().equals(getLongClazz())) {
+                AstIntegerNumberValue tmp = (AstIntegerNumberValue) value;
+                return new LongField(tmp.getValue());
+            } else if (value.getType().equals(getDoubleClazz())) {
+                AstFloatingNumberValue tmp = (AstFloatingNumberValue) value;
+                return new DoubleField(tmp.getValue());
+            } else if (value.getType().equals(getStringClazz())) {
+                AstStringValue tmp = (AstStringValue) value;
+                return new StringField(tmp.getValue());
+            } else if (value.getType().equals(getCharClazz())) {
+                AstSymbolValue tmp = (AstSymbolValue) value;
+                return new CharField(tmp.getValue());
+            } else {
+                throw new TypeMismatchException();
+            }
+        } else {
+            throw new TypeMismatchException();
+        }
     }
 }

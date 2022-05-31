@@ -1,5 +1,6 @@
 package parser.ast.function.data;
 
+import database.Database;
 import parser.ast.condition.AstCondition;
 import parser.ast.function.AstFunction;
 import parser.ast.name.AstTableName;
@@ -24,5 +25,11 @@ public class AstDeleteFunction implements AstFunction {
     @Override
     public String getType() {
         return AstDeleteFunction.class.getName();
+    }
+
+    //todo
+    @Override
+    public void execute(Database database) {
+
     }
 }

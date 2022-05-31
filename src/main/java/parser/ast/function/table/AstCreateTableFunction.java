@@ -1,12 +1,21 @@
 package parser.ast.function.table;
 
+import database.Database;
+import database.structures.Table;
+import database.structures.TableFieldInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import parser.ast.function.AstFunction;
 import parser.ast.function.AstColumnDefinition;
 import parser.ast.name.AstTableName;
+import database.exception.TypeMismatchException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class AstCreateTableFunction implements AstFunction {
+    private final static Logger log = LoggerFactory.getLogger(AstCreateTableFunction.class.getName());
+
     private final boolean hasNotExistPrefix;
     private final AstTableName tableName;
     private final List<AstColumnDefinition> columnDefinitionList;
@@ -32,5 +41,31 @@ public class AstCreateTableFunction implements AstFunction {
     @Override
     public String getType() {
         return AstCreateTableFunction.class.getName();
+    }
+
+    @Override
+    public void execute(Database database) {
+        boolean isPresent = database.hasTableByName(tableName.getSchemaName(), tableName.getTableName());
+
+        if (isPresent) {
+            if (hasNotExistPrefix) {
+                log.info("Table already exists");
+            } else {
+                log.error("Table already exists");
+            }
+        } else {
+            List<TableFieldInformation> tableFieldInformationList = new ArrayList<>();
+
+            for (AstColumnDefinition columnDefinition : columnDefinitionList) {
+                try {
+                    tableFieldInformationList.add(columnDefinition.getInformation());
+                } catch (TypeMismatchException e) {
+                    log.error("Error while creating field for new table", e);
+                }
+            }
+
+            database.addTable(new Table(tableName.getTableName(), tableName.getSchemaName(), tableFieldInformationList));
+            log.info("Table created successfully {}", tableName);
+        }
     }
 }

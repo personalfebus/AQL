@@ -1,0 +1,12 @@
+create table if not exists bmstu.students (
+   id bigserial primary key,
+   name string not null,
+   surname string not null,
+   patronymic string default "",
+   identity_code string unique
+);
+
+insert into bmstu.students
+(name, surname, patronymic, identity_code) values
+("Gleb", "Zavyalov", "Olegovich", "18u726"),
+("Andrey", "Zvorigin", "Valerevich", "18u727");

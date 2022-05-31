@@ -1,8 +1,10 @@
 package parser.ast.function;
 
+import database.structures.TableFieldInformation;
 import parser.ast.AstType;
 import parser.ast.constraint.AstConstraint;
 import parser.ast.name.AstFieldName;
+import database.exception.TypeMismatchException;
 
 public class AstColumnDefinition {
     private final AstFieldName name;
@@ -31,5 +33,13 @@ public class AstColumnDefinition {
 
     public AstConstraint getConstraint() {
         return constraint;
+    }
+
+    public TableFieldInformation getInformation() throws TypeMismatchException {
+        TableFieldInformation information = new TableFieldInformation(name.getName(), type.getTypeName());
+        if (constraint != null) {
+            constraint.emplaceConstraint(information, type);
+        }
+        return information;
     }
 }

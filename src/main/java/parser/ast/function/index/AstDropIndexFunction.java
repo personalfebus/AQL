@@ -1,5 +1,6 @@
 package parser.ast.function.index;
 
+import database.Database;
 import parser.ast.function.AstFunction;
 import parser.ast.name.AstIndexName;
 import parser.ast.name.AstTableName;
@@ -30,5 +31,11 @@ public class AstDropIndexFunction implements AstFunction {
     @Override
     public String getType() {
         return AstDropIndexFunction.class.getName();
+    }
+
+    //todo
+    @Override
+    public void execute(Database database) {
+
     }
 }
