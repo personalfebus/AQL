@@ -1,7 +1,6 @@
 package database.btree;
 
 import database.field.Field;
-import lexer.token.SymbolToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,19 +13,16 @@ public class BTree implements Serializable {
     //minimum number of children of one node
     private final int t;
     private final int numberOfFields;
-    private final int keyGenerator;
 
     public BTree(BTreeNode root, int t, int numberOfFields) {
         this.root = root;
         this.t = t;
         this.numberOfFields = numberOfFields;
-        this.keyGenerator = 0;
     }
 
-    public BTree(int t, int numberOfFields, int keyGenerator) {
+    public BTree(int t, int numberOfFields) {
         this.t = t;
         this.numberOfFields = numberOfFields;
-        this.keyGenerator = keyGenerator;
         this.root = new BTreeNode(t, numberOfFields, true, 0);
         //todo write disk
     }
@@ -43,12 +39,19 @@ public class BTree implements Serializable {
         }
     }
 
+    public Entry getEntryByKey(Field key) {
+        if (root == null) {
+            return null;
+        } else {
+            return root.getEntryByKey(key);
+        }
+    }
+
     public void splitChild(BTreeNode x, int i) {
         BTreeNode y = x.children[i];
         BTreeNode z = new BTreeNode(y.t, y.numberOfFields, y.isLeaf, t - 1);
 
         for (int j = 0; j < t - 1; j++) {
-            System.out.println(j);
             z.keys[j] = y.keys[j + t];
             z.fieldContainer.setRow(j, y.fieldContainer.getRow(j + t));
         }

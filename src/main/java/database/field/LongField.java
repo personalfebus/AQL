@@ -1,5 +1,7 @@
 package database.field;
 
+import java.util.Objects;
+
 public class LongField implements Field, Comparable<Field> {
     private long value;
 
@@ -30,5 +32,23 @@ public class LongField implements Field, Comparable<Field> {
         return "LongField{" +
                 "value=" + value +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Field other) {
+        return Field.super.equals(other);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LongField longField = (LongField) o;
+        return value == longField.value;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(value);
     }
 }

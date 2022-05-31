@@ -58,7 +58,7 @@ public class BTreeNode implements Serializable {
             i++;
         }
 
-        if (keys[i].compareTo(key) == 0) {
+        if (i < n && keys[i].compareTo(key) == 0) {
             return this;
         }
 
@@ -67,6 +67,24 @@ public class BTreeNode implements Serializable {
         }
 
         return children[i].searchByKey(key);
+    }
+
+    public Entry getEntryByKey(Field key) {
+        int i = 0;
+
+        while (i < n && key.compareTo(keys[i]) > 0) {
+            i++;
+        }
+
+        if (i < n && keys[i].compareTo(key) == 0) {
+            return new Entry(keys[i], fieldContainer.getRow(i));
+        }
+
+        if (isLeaf) {
+            return null;
+        }
+
+        return children[i].getEntryByKey(key);
     }
 
     /**

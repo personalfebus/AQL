@@ -65,7 +65,7 @@ public class Lexer implements ILexer {
             } else if (isDigit()) {
                 // lex numbers
                 int start = position;
-                skipToEndOfLexeme();
+                skipToEndOfLexemeForNumbers();
                 String number = input.substring(start, position);
                 int dotPosition = number.indexOf('.');
 
@@ -215,6 +215,12 @@ public class Lexer implements ILexer {
 
     private void skipToEndOfLexeme() {
         while (!isSpaceSymbol() && !(isOperator() > 0)) {
+            moveForward();
+        }
+    }
+
+    private void skipToEndOfLexemeForNumbers() {
+        while (!isSpaceSymbol() && (input.charAt(position) == '.' || !(isOperator() > 0))) {
             moveForward();
         }
     }
