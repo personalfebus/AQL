@@ -18,7 +18,7 @@ public class AstConditionOperator implements AstConditionPart {
             }
             case ">":
             case "<":
-            case "==":
+            case "=":
             case "!=":
             case ">=":
             case "<=": {

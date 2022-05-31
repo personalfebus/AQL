@@ -2,17 +2,17 @@ package parser.ast;
 
 import parser.ast.function.AstFunction;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AstProgram {
-    private final Set<AstFunction> functions;
+    private final List<AstFunction> functions;
 
     public AstProgram() {
-        functions = new HashSet<>();
+        functions = new ArrayList<>();
     }
 
-    public AstProgram(Set<AstFunction> functions) {
+    public AstProgram(List<AstFunction> functions) {
         this.functions = functions;
     }
 

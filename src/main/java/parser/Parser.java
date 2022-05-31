@@ -8,6 +8,7 @@ import parser.ast.arithmetic.*;
 import parser.ast.condition.AstCondition;
 import parser.ast.condition.AstConditionConstantRValue;
 import parser.ast.condition.AstConditionOperator;
+import parser.ast.condition.AstConditionSeparator;
 import parser.ast.constraint.*;
 import parser.ast.function.AstFunction;
 import parser.ast.AstProgram;
@@ -50,7 +51,7 @@ public class Parser implements IParser {
     }
 
     @Override
-    public AstProgram parse(String input) throws SyntaxException, BadArithmeticExpressionException, BadConditionExpressionException {
+    public AstProgram parse() throws SyntaxException, BadArithmeticExpressionException, BadConditionExpressionException {
         return parseProgram();
     }
 
@@ -62,11 +63,16 @@ public class Parser implements IParser {
             AstFunction function = parseFunction();
             program.addFunction(function);
 
+            assertTokenType(Tokens.operatorType);
+            assertTokenBody(";");
+            nextToken();
+
             if (currentToken.getType().equals(Tokens.eofType)) {
                 break;
             }
         }
 
+        int varForBreakpoint = 666;
         return program;
     }
 
@@ -195,6 +201,9 @@ public class Parser implements IParser {
 
         for (;;) {
             AstFieldName fieldName = parseFieldName();
+            assertTokenType(Tokens.operatorType);
+            assertTokenBody("=");
+            nextToken();
             AstValue value = parseValue();
             updateValueList.add(new AstUpdateValue(fieldName, value));
 
@@ -487,8 +496,9 @@ public class Parser implements IParser {
 
     private AstValue parseValue() throws SyntaxException {
         if (currentToken.getType().equalsIgnoreCase(Tokens.stringType)) {
+            StringToken stringToken = (StringToken) currentToken;
             nextToken();
-            return new AstStringValue(currentToken.getBody());
+            return new AstStringValue(stringToken.getBody());
         } else if (currentToken.getType().equalsIgnoreCase(Tokens.symbolType)) {
             SymbolToken symbolToken = (SymbolToken) currentToken;
             nextToken();
@@ -597,11 +607,13 @@ public class Parser implements IParser {
     private void parseConditionComparisonBlock(AstCondition condition) throws BadArithmeticExpressionException, SyntaxException, BadConditionExpressionException {
         if (currentToken.getType().equalsIgnoreCase(Tokens.operatorType)
                 && currentToken.getBody().equalsIgnoreCase("(")) {
+            condition.addPart(new AstConditionSeparator("SEPARATOR_OPEN"));
             nextToken();
             parseConditionHead(condition);
             assertTokenType(Tokens.operatorType);
             assertTokenBody(")");
             nextToken();
+            condition.addPart(new AstConditionSeparator("SEPARATOR_CLOSE"));
         } else {
             AstArithExpr first = parseArithExpr();
             condition.addPart(new AstConditionConstantRValue(first));
@@ -617,6 +629,8 @@ public class Parser implements IParser {
                 condition.addPart(new AstConditionOperator(currentToken.getBody()));
             } else if (currentToken.getBody().equalsIgnoreCase("<=")) {
                 condition.addPart(new AstConditionOperator(currentToken.getBody()));
+            } else if (currentToken.getBody().equalsIgnoreCase("!=")) {
+                condition.addPart(new AstConditionOperator(currentToken.getBody()));
             } else {
                 throw new SyntaxException("Comparison operator", currentToken.getBody(), currentToken.getLine(), currentToken.getPosition());
             }
@@ -625,6 +639,12 @@ public class Parser implements IParser {
             AstArithExpr second = parseArithExpr();
             condition.addPart(new AstConditionConstantRValue(second));
         }
+    }
+
+    private boolean isCompareOperator(String op) {
+        return (op.equalsIgnoreCase("==") || op.equalsIgnoreCase("<=")
+        || op.equalsIgnoreCase(">=") || op.equalsIgnoreCase("!=")
+        || op.equalsIgnoreCase("<") || op.equalsIgnoreCase(">"));
     }
 
     //todo check
@@ -666,13 +686,13 @@ public class Parser implements IParser {
             AstFieldReference fieldReference = parseFieldReference();
             arithExpr.addPart(new AstArithExprIdentConstant(fieldReference));
         } else if (currentToken.getType().equalsIgnoreCase(Tokens.operatorType)) {
-            if (currentToken.getBody().equalsIgnoreCase("(")) {
+            if (currentToken.getBody().equalsIgnoreCase("[")) {
                 // <(> arith_expr <)>
                 arithExpr.addPart(new AstArithExprSeparator("SEPARATOR_OPEN"));
                 nextToken();
                 parseArithExprHead(arithExpr);
                 assertTokenType(Tokens.operatorType);
-                assertTokenBody(")");
+                assertTokenBody("]");
                 arithExpr.addPart(new AstArithExprSeparator("SEPARATOR_CLOSE"));
                 nextToken();
             } else {
@@ -690,20 +710,26 @@ public class Parser implements IParser {
             //binary op </> | <*> | <+> | <->.
             if (currentToken.getBody().equalsIgnoreCase("*")) {
                 arithExpr.addPart(new AstArithExprOperator('*', 2));
+                nextToken();
+                parseArithExprHead(arithExpr);
             } else if (currentToken.getBody().equalsIgnoreCase("/")) {
                 arithExpr.addPart(new AstArithExprOperator('/', 2));
+                nextToken();
+                parseArithExprHead(arithExpr);
             } else if (currentToken.getBody().equalsIgnoreCase("+")) {
                 arithExpr.addPart(new AstArithExprOperator('+', 2));
+                nextToken();
+                parseArithExprHead(arithExpr);
             } else if (currentToken.getBody().equalsIgnoreCase("-")) {
                 arithExpr.addPart(new AstArithExprOperator('-', 2));
+                nextToken();
+                parseArithExprHead(arithExpr);
             }
-            nextToken();
-            parseArithExprHead(arithExpr);
         }
     }
 
     private AstType parseType() throws SyntaxException {
-        assertTokenType(Tokens.identifierType);
+        assertTokenType(Tokens.keywordType);
 
         if (currentToken.getBody().equalsIgnoreCase("int")
         || currentToken.getBody().equalsIgnoreCase("serial")
@@ -721,7 +747,7 @@ public class Parser implements IParser {
     }
 
     private AstIndexType parseIndexType() throws SyntaxException {
-        assertTokenType(Tokens.identifierType);
+        assertTokenType(Tokens.keywordType);
 
         if (currentToken.getBody().equalsIgnoreCase("btree")
         || currentToken.getBody().equalsIgnoreCase("hash")) {

@@ -144,9 +144,11 @@ public class Lexer implements ILexer {
         }
         if (input.charAt(position) == ';' || input.charAt(position) == '.' ||
                 input.charAt(position) == '(' || input.charAt(position) == ')' ||
+                input.charAt(position) == '[' || input.charAt(position) == ']' ||
                 input.charAt(position) == ',' || input.charAt(position) == '=' ||
                 input.charAt(position) == '+' || input.charAt(position) == '-' ||
-                input.charAt(position) == '*' || input.charAt(position) == '/'
+                input.charAt(position) == '*' || input.charAt(position) == '/' ||
+                input.charAt(position) == '>' || input.charAt(position) == '<'
         ) {
             return 1;
         } else {
@@ -174,7 +176,7 @@ public class Lexer implements ILexer {
                 word.equalsIgnoreCase("if") ||
                 word.equalsIgnoreCase("not") ||
                 word.equalsIgnoreCase("exists") ||
-                word.equalsIgnoreCase("crate") ||
+                word.equalsIgnoreCase("create") ||
                 word.equalsIgnoreCase("table") ||
                 word.equalsIgnoreCase("primary") ||
                 word.equalsIgnoreCase("key") ||

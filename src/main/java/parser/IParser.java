@@ -8,5 +8,5 @@ import parser.exception.SyntaxException;
 public interface IParser {
     //return ast-tree head
     //pass the input into parser inside
-    AstProgram parse(String input) throws SyntaxException, BadArithmeticExpressionException, BadConditionExpressionException;
+    AstProgram parse() throws SyntaxException, BadArithmeticExpressionException, BadConditionExpressionException;
 }

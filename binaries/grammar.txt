@@ -61,7 +61,7 @@ condition_comparison_block := arithmetic_expr_head ">" arithmetic_expr_head
                             | "(" condition_head ")".
 
 arithmetic_expr_head := unary_number_operator arithmetic_expr_body | arithmetic_expr_body.
-arithmetic_expr_body := condition_comparison_values arithmetic_expr_tail | <(> arithmetic_expr_head <)>.
+arithmetic_expr_body := condition_comparison_values arithmetic_expr_tail | <[> arithmetic_expr_head <]>.
 arithmetic_expr_tail := binary_number_operator arithmetic_expr_head | .
 unary_number_operator := <->.
 binary_number_operator := </> | <*> | <+> | <->.

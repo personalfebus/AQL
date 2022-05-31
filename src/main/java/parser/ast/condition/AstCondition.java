@@ -23,8 +23,8 @@ public class AstCondition implements AstConditionPart {
             if (operator.getSubType().equals("UNARY_OPERATOR")) {
                 stack.push(part);
             } else if (operator.getSubType().equals("BINARY_OPERATOR")) {
-                while (stack.peekLast() != null && stack.peekLast().getType().equals(AstConditionParts.astConditionOperatorType)) {
-                    AstConditionOperator operator2 = (AstConditionOperator) stack.peekLast();
+                while (stack.peekFirst() != null && stack.peekFirst().getType().equals(AstConditionParts.astConditionOperatorType)) {
+                    AstConditionOperator operator2 = (AstConditionOperator) stack.peekFirst();
                     if (operator2.getPriority() < operator.getPriority()
                             || (operator2.getPriority() == operator.getPriority() && !operator.isRightAssociative())) {
                         parts.add(stack.pop());
@@ -41,11 +41,11 @@ public class AstCondition implements AstConditionPart {
         } else if (part.getType().equals("SEPARATOR_OPEN")) {
             stack.push(part);
         } else if (part.getType().equals("SEPARATOR_CLOSE")) {
-            while (stack.peekLast() != null && !stack.peekLast().getType().equals("SEPARATOR_OPEN")) {
+            while (stack.peekFirst() != null && !stack.peekFirst().getType().equals("SEPARATOR_OPEN")) {
                 parts.add(stack.pop());
             }
 
-            if (stack.peekLast() == null) {
+            if (stack.peekFirst() == null) {
                 System.out.println("NOT CLOSED SEPARATORS");
                 throw new BadConditionExpressionException();
             }
@@ -58,7 +58,7 @@ public class AstCondition implements AstConditionPart {
 
     public void emptyStack() throws BadConditionExpressionException {
         while (!stack.isEmpty()) {
-            if (!stack.peekLast().getType().equals(AstConditionParts.astConditionOperatorType)) {
+            if (!stack.peekFirst().getType().equals(AstConditionParts.astConditionOperatorType)) {
                 throw new BadConditionExpressionException();
             } else parts.add(stack.pop());
         }

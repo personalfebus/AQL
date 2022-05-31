@@ -27,8 +27,8 @@ public class AstArithExpr {
             if (operator.getSubType().equals("UNARY_OPERATOR")) {
                 stack.push(part);
             } else if (operator.getSubType().equals("BINARY_OPERATOR")) {
-                while (stack.peekLast() != null && stack.peekLast().getType().equals(AstArithExprParts.astArithExprOperatorType)) {
-                    AstArithExprOperator operator2 = (AstArithExprOperator)stack.peekLast();
+                while (stack.peekFirst() != null && stack.peekFirst().getType().equals(AstArithExprParts.astArithExprOperatorType)) {
+                    AstArithExprOperator operator2 = (AstArithExprOperator)stack.peekFirst();
                     if (operator2.getPriority() < operator.getPriority()
                             || (operator2.getPriority() == operator.getPriority() && !operator.isRightAssociative())) {
                         parts.add(stack.pop());
@@ -44,11 +44,11 @@ public class AstArithExpr {
         } else if (part.getType().equals("SEPARATOR_OPEN")) {
             stack.push(part);
         } else if (part.getType().equals("SEPARATOR_CLOSE")) {
-            while (stack.peekLast() != null && !stack.peekLast().getType().equals("SEPARATOR_OPEN")) {
+            while (stack.peekFirst() != null && !stack.peekFirst().getType().equals("SEPARATOR_OPEN")) {
                 parts.add(stack.pop());
             }
 
-            if (stack.peekLast() == null) {
+            if (stack.peekFirst() == null) {
                 System.out.println("NOT CLOSED SEPARATORS");
                 throw new BadArithmeticExpressionException();
             }
@@ -60,7 +60,7 @@ public class AstArithExpr {
 
     public void emptyStack() throws BadArithmeticExpressionException {
         while (!stack.isEmpty()) {
-            if (!stack.peekLast().getType().equals(AstArithExprParts.astArithExprOperatorType)) throw new BadArithmeticExpressionException();
+            if (!stack.peekFirst().getType().equals(AstArithExprParts.astArithExprOperatorType)) throw new BadArithmeticExpressionException();
             else parts.add(stack.pop());
         }
     }

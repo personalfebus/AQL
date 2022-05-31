@@ -3,6 +3,7 @@ package controller;
 import database.field.*;
 import parser.IParser;
 import parser.Parser;
+import parser.ast.AstProgram;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -36,7 +37,7 @@ public class DatabaseManagementSystem {
             Path fileName = Path.of("queries/" + input);
             String queries = Files.readString(fileName);
             IParser parser = new Parser(queries);
-
+            AstProgram program = parser.parse();
             //step to the next input file name
             input = in.readLine();
         }
