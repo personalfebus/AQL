@@ -564,7 +564,6 @@ public class Parser implements IParser {
         return new AstPrimaryKeyConstraint();
     }
 
-    //todo check
     private AstCondition parseCondition() throws BadConditionExpressionException, BadArithmeticExpressionException, SyntaxException {
         AstCondition condition = new AstCondition();
         parseConditionHead(condition);
@@ -647,7 +646,6 @@ public class Parser implements IParser {
         || op.equalsIgnoreCase("<") || op.equalsIgnoreCase(">"));
     }
 
-    //todo check
     private AstArithExpr parseArithExpr() throws BadArithmeticExpressionException, SyntaxException {
         AstArithExpr arithExpr = new AstArithExpr();
         parseArithExprHead(arithExpr);

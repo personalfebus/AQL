@@ -30,4 +30,12 @@ public class FieldContainer implements Serializable {
     public Field get(int i, int j) {
         return fields[i][j];
     }
+
+    public Field[] getRow(int i) {
+        return fields[i];
+    }
+
+    public void setRow(int i, Field[] row) {
+        fields[i] = row;
+    }
 }
