@@ -1,9 +1,11 @@
 plugins {
     id 'java'
+    id 'application'
 }
 
 group 'ru.bmstu.iu9.personalfebus'
 version '1.0-SNAPSHOT'
+mainClassName = "controller.DatabaseManagementSystem"
 
 repositories {
     mavenCentral()
@@ -20,3 +22,17 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+jar {
+    manifest {
+        attributes 'Main-Class' : mainClassName
+    }
+}
+
+task runJavaProject(type : JavaExec){
+    group = "Execution"
+    description = "Run the main class with JavaExecTask"
+    classpath = sourceSets.main.runtimeClasspath
+    main = mainClassName
+}
+

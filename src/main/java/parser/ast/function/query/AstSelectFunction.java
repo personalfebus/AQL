@@ -1,6 +1,9 @@
 package parser.ast.function.query;
 
 import database.Database;
+import database.exception.TypeMismatchException;
+import database.exception.UnknownFieldException;
+import database.structures.SelectOutputRow;
 import database.structures.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +51,12 @@ public class AstSelectFunction implements AstFunction {
     public void execute(Database database) {
         if (database.hasTableByName(tableName.getSchemaName(), tableName.getTableName())) {
             Table table = database.getTableByName(tableName.getSchemaName(), tableName.getTableName());
-
+            try {
+                List<SelectOutputRow> rows = table.selectValue(columnList, condition);
+                System.out.println(rows);
+            } catch (TypeMismatchException | UnknownFieldException e) {
+                log.error("Error in select", e);
+            }
         } else {
             log.error("Table does not exist");
         }

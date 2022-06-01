@@ -68,4 +68,8 @@ public class AstCondition implements AstConditionPart {
     public String getType() {
         return AstCondition.class.getName();
     }
+
+    public List<AstConditionPart> getParts() {
+        return parts;
+    }
 }

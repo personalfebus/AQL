@@ -13,4 +13,8 @@ public class AstConditionConstantRValue implements AstConditionPart {
     public String getType() {
         return AstConditionConstantRValue.class.getName();
     }
+
+    public AstArithExpr getArithExpr() {
+        return arithExpr;
+    }
 }

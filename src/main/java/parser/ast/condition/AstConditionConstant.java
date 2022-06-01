@@ -13,4 +13,8 @@ public class AstConditionConstant implements AstConditionPart {
     public String getType() {
         return AstConditionConstant.class.getName();
     }
+
+    public AstValue getValue() {
+        return value;
+    }
 }

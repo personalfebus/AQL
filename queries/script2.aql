@@ -10,3 +10,6 @@ insert into bmstu.students
 (name, surname, patronymic, identity_code) values
 ("Gleb", "Zavyalov", "Olegovich", "18u726"),
 ("Andrey", "Zvorigin", "Valerevich", "18u727");
+
+select id, identity_code from bmstu.students
+where id = 1;

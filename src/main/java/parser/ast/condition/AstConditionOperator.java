@@ -59,4 +59,8 @@ public class AstConditionOperator implements AstConditionPart {
     public boolean isRightAssociative() {
         return isRightAssociative;
     }
+
+    public String getOperator() {
+        return operator;
+    }
 }

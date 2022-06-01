@@ -11,9 +11,14 @@ import database.field.Fields;
 import database.structures.value.BigSerialDefaultValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import parser.ast.condition.AstCondition;
+import parser.ast.arithmetic.AstArithExpr;
+import parser.ast.arithmetic.AstArithExprIdentConstant;
+import parser.ast.arithmetic.AstArithExprValue;
+import parser.ast.condition.*;
 import parser.ast.function.data.AstInsertRow;
 import parser.ast.name.AstFieldName;
+import parser.ast.name.AstFieldReference;
+import parser.ast.value.AstValue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -105,9 +110,59 @@ public class Table {
         }
     }
 
-    //todo
-    public Entry selectValues(List<AstFieldName> columnList, AstCondition condition) {
-        return null;
+    public List<SelectOutputRow> selectValue(List<AstFieldName> columnList, AstCondition condition) throws TypeMismatchException, UnknownFieldException {
+        List<SelectOutputRow> result = new ArrayList<>();
+
+        assertColumnList(columnList);
+
+        for (int i = 0; i < condition.getParts().size(); i += 3) {
+            Entry entry = selectEqPrKey(columnList, condition);
+            Field[] fields = new Field[columnList.size()];
+
+            int j = 0;
+            for (TableFieldInformation inf : fieldInformation) {
+                if (inf.isPresentInInsert()) {
+                    fields[inf.getInsertPosition()] = (j == 0 ? entry.getKey() : entry.getValues()[j - 1]);
+                }
+
+                j++;
+            }
+            SelectOutputRow row = new SelectOutputRow(fields);
+            result.add(row);
+        }
+
+        return result;
+    }
+
+    public Entry selectEqPrKey(List<AstFieldName> columnList, AstCondition condition) throws TypeMismatchException {
+        String fieldName = "";
+        Field key = null;
+        String op = "";
+
+        for (AstConditionPart part : condition.getParts()) {
+            if (part.getType().equals(AstConditionParts.astConditionConstantRValueType)) {
+                AstArithExpr expr = ((AstConditionConstantRValue) part).getArithExpr();
+                if (expr.getParts().get(0).getType().equals(AstArithExprIdentConstant.class.getName())) {
+                    AstArithExprIdentConstant constant = (AstArithExprIdentConstant) expr.getParts().get(0);
+                    fieldName = constant.getFieldName().getFieldName().getName();
+                } else if (expr.getParts().get(0).getType().equals(AstArithExprValue.class.getName())) {
+                    AstArithExprValue value = (AstArithExprValue) expr.getParts().get(0);
+                    key = Fields.astValueToField("int", value.getValue());
+                }
+            } else if (part.getType().equals(AstConditionParts.astConditionConstantType)) {
+                AstValue value = ((AstConditionConstant) part).getValue();
+                key = Fields.astValueToField("int", value);
+            } else if (part.getType().equals(AstConditionParts.astConditionOperatorType)) {
+                AstConditionOperator operator = (AstConditionOperator) part;
+                op = operator.getOperator();
+            }
+        }
+
+        if (key == null) {
+            return null;
+        }
+
+        return table.getEntryByKey(key);
     }
 
     private void assertColumnList(List<AstFieldName> columnList) throws UnknownFieldException {
