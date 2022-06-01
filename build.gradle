@@ -30,6 +30,7 @@ jar {
 
 application {
     mainClass = 'controller.DatabaseManagementSystem'
+    applicationDefaultJvmArgs = ['-Dgreeting.language=en', '-Dfile.encoding=UTF-8']
 }
 
 run {
