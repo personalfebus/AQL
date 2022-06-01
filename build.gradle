@@ -5,7 +5,6 @@ plugins {
 
 group 'ru.bmstu.iu9.personalfebus'
 version '1.0-SNAPSHOT'
-mainClassName = "controller.DatabaseManagementSystem"
 
 repositories {
     mavenCentral()
@@ -25,8 +24,16 @@ test {
 
 jar {
     manifest {
-        attributes 'Main-Class' : mainClassName
+        attributes 'Main-Class' : 'controller.DatabaseManagementSystem'
     }
+}
+
+application {
+    mainClass = 'controller.DatabaseManagementSystem'
+}
+
+run {
+    standardInput = System.in
 }
 
 task runJavaProject(type : JavaExec){
