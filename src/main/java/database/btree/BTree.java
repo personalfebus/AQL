@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.plaf.basic.BasicTextAreaUI;
 import java.io.*;
+import java.util.Arrays;
 import java.util.UUID;
 
 public class BTree implements Serializable {
@@ -90,10 +91,8 @@ public class BTree implements Serializable {
     }
 
     public void splitChild(BTreeNode x, int i) throws ReadFromDiskError, WriteToDiskError {
-        //read from disk
-        x.children[i] = BTreeNode.readFromDisk(x.childrenUuids[i]);
+        //x.children[i] should already be read from disk
         BTreeNode y = x.children[i];
-        x.children[i] = null;
 
         BTreeNode z = new BTreeNode(y.t, y.numberOfFields, y.isLeaf, t - 1);
 
@@ -104,7 +103,7 @@ public class BTree implements Serializable {
 
         if (!y.isLeaf) {
             for (int j = 0; j < t; j++) {
-//                z.children[j] = y.children[j + t];
+                z.children[j] = y.children[j + t];
                 z.childrenUuids[j] = y.childrenUuids[j + t];
             }
         }
@@ -112,11 +111,11 @@ public class BTree implements Serializable {
         y.n = t - 1;
 
         for (int j = x.n; j >= i + 1; j--) {
-//            x.children[j + 1] = x.children[j];
+            x.children[j + 1] = x.children[j];
             x.childrenUuids[j + 1] = x.childrenUuids[j];
         }
 
-//        x.children[i + 1] = z;
+        x.children[i + 1] = z;
         x.childrenUuids[i + 1] = z.uuid;
 
         for (int j = x.n - 1; j >= i; j--) {
@@ -146,7 +145,7 @@ public class BTree implements Serializable {
         if (root.n == 2*t - 1) {
             BTreeNode s = new BTreeNode(t, numberOfFields, false, 0);
             root = s;
-//            s.children[0] = r;
+            s.children[0] = r;
             s.childrenUuids[0] = r.uuid;
             splitChild(s, 0);
             insertNonFull(s, key, values);
@@ -155,7 +154,7 @@ public class BTree implements Serializable {
         }
     }
 
-    public void remove(Field key) {
+    public void remove(Field key) throws ReadFromDiskError {
         if (root == null) {
             log.error("Remove from empty tree");
             return;
@@ -167,7 +166,7 @@ public class BTree implements Serializable {
             if (root.isLeaf) {
                 root = null;
             } else {
-                root = root.children[0];
+                root = BTreeNode.readFromDisk(root.childrenUuids[0]);
             }
         }
     }
@@ -203,11 +202,11 @@ public class BTree implements Serializable {
                     i++;
                 }
             }
-            insertNonFull(x.children[i], key, values);
 
-            //remove from memory
-            x.children[i] = null;
+            insertNonFull(x.children[i], key, values);
         }
+
+        x.children = new BTreeNode[2*t];
     }
 
 //    public void BTreeInsert(Field key, Field[] values) {

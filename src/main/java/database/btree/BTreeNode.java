@@ -28,7 +28,7 @@ class BTreeNode implements Serializable {
     //количество полей
     public final int numberOfFields;
     //дочерние вершины дерева
-    public final transient BTreeNode[] children;
+    public transient BTreeNode[] children;
     public final UUID[] childrenUuids;
     //количество ключей в ноде на данный момент
     public int n;
@@ -51,7 +51,9 @@ class BTreeNode implements Serializable {
         try {
             FileInputStream fileInputStream = new FileInputStream(pathPrefix + uuid.toString());
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-            return (BTreeNode) objectInputStream.readObject();
+            BTreeNode result = (BTreeNode) objectInputStream.readObject();
+            result.children = new BTreeNode[2*result.t];
+            return result;
         } catch (IOException | ClassNotFoundException e) {
             throw new ReadFromDiskError(e);
         }
@@ -67,6 +69,7 @@ class BTreeNode implements Serializable {
         }
     }
 
+    //done
     public void traverse() throws ReadFromDiskError {
         for (int i = 0; i < n; i++) {
             if (!isLeaf) {
@@ -92,6 +95,7 @@ class BTreeNode implements Serializable {
         }
     }
 
+    //done
     public BTreeNode searchByKey(Field key) throws ReadFromDiskError {
         int i = 0;
 
@@ -113,6 +117,7 @@ class BTreeNode implements Serializable {
         return result;
     }
 
+    //done
     /**
      * Получить пару ключ-значения по ключу
      * @param key Ключ
@@ -139,6 +144,7 @@ class BTreeNode implements Serializable {
         return result;
     }
 
+    //done
     /**
      * Найти позицию ключа в вершине дерева
      * @param key Ключ
@@ -152,11 +158,12 @@ class BTreeNode implements Serializable {
         return idx;
     }
 
+    //todo clear
     /**
      * Удалить ключ и соответсвующие ему значения из вершины
      * @param key Ключ
      */
-    public void remove(Field key) {
+    public void remove(Field key) throws ReadFromDiskError {
         int idx = findKey(key);
 
         if (idx < n && keys[idx].compareTo(key) == 0) {
@@ -170,19 +177,25 @@ class BTreeNode implements Serializable {
                 log.info("Key {} does not exist in BTree", key);
             }
 
+            children[idx] = readFromDisk(childrenUuids[idx]);
             boolean flag = (idx == n);
             if (children[idx].n < t) {
                 fill(idx);
             }
 
             if (flag && idx > n) {
-                children[idx - 1].remove(key);
+                BTreeNode x = readFromDisk(childrenUuids[idx - 1]);
+                x.remove(key);
+//                children[idx - 1].remove(key);
             } else {
-                children[idx].remove(key);
+                BTreeNode x = readFromDisk(childrenUuids[idx]);
+                x.remove(key);
+//                children[idx].remove(key);
             }
         }
     }
 
+    //done
     private void removeFromLeaf(int idx) {
         for (int i = idx + 1; i < n; ++i) {
             keys[i - 1] = keys[i];
@@ -191,8 +204,11 @@ class BTreeNode implements Serializable {
         n--;
     }
 
-    private void removeFromNonLeaf(int idx) {
+    //done
+    private void removeFromNonLeaf(int idx) throws ReadFromDiskError {
         Field k = keys[idx];
+        children[idx] = readFromDisk(childrenUuids[idx]);
+        children[idx + 1] = readFromDisk(childrenUuids[idx + 1]);
 
         if (children[idx].n >= t) {
             Entry predEntry = getPredEntry(idx);
@@ -210,9 +226,12 @@ class BTreeNode implements Serializable {
         }
     }
 
-    private void merge(int idx) {
-        BTreeNode child = children[idx];
-        BTreeNode sibling = children[idx + 1];
+    //done
+    private void merge(int idx) throws ReadFromDiskError {
+//        BTreeNode child = children[idx];
+//        BTreeNode sibling = children[idx + 1];
+        BTreeNode child = readFromDisk(childrenUuids[idx]);
+        BTreeNode sibling = readFromDisk(childrenUuids[idx + 1]);
 
         child.keys[t - 1] = keys[idx];
         child.fieldContainer.setRow(t - 1, fieldContainer.getRow(idx));
@@ -225,6 +244,7 @@ class BTreeNode implements Serializable {
         if (!child.isLeaf) {
             for (int i = 0; i <= sibling.n; i++) {
                 child.children[i + t] = sibling.children[i];
+                child.childrenUuids[i + t] = sibling.childrenUuids[i + t];
             }
         }
 
@@ -235,13 +255,21 @@ class BTreeNode implements Serializable {
 
         for (int i = idx + 2; i <= n; i++) {
             children[i - 1] = children[i];
+            childrenUuids[i - 1] = childrenUuids[i];
         }
 
         child.n += sibling.n + 1;
         n--;
     }
 
-    private void fill(int idx) {
+    //done
+    private void fill(int idx) throws ReadFromDiskError {
+        if (idx != 0) {
+            children[idx - 1] = readFromDisk(childrenUuids[idx - 1]);
+        }
+        if (idx != n) {
+            children[idx + 1] = readFromDisk(childrenUuids[idx + 1]);
+        }
         if (idx != 0 && children[idx - 1].n >= t) {
             borrowFromPrev(idx);
         } else if (idx != n && children[idx + 1].n >= t) {
@@ -255,15 +283,19 @@ class BTreeNode implements Serializable {
         }
     }
 
-    private void borrowFromNext(int idx) {
-        BTreeNode child = children[idx];
-        BTreeNode sibling = children[idx + 1];
+    //done
+    private void borrowFromNext(int idx) throws ReadFromDiskError {
+//        BTreeNode child = children[idx];
+//        BTreeNode sibling = children[idx + 1];
+        BTreeNode child = readFromDisk(childrenUuids[idx]);
+        BTreeNode sibling = readFromDisk(childrenUuids[idx + 1]);
 
         child.keys[child.n] = keys[idx];
         child.fieldContainer.setRow(child.n, fieldContainer.getRow(idx));
 
         if (!child.isLeaf) {
             child.children[child.n - 1] = sibling.children[0];
+            child.childrenUuids[child.n - 1] = sibling.childrenUuids[0];
         }
 
         keys[idx] = sibling.keys[0];
@@ -277,6 +309,7 @@ class BTreeNode implements Serializable {
         if (!sibling.isLeaf) {
             for (int i = 1; i <= sibling.n; i++) {
                 sibling.children[i - 1] = sibling.children[i];
+                sibling.childrenUuids[i - 1] = sibling.childrenUuids[i];
             }
         }
 
@@ -284,9 +317,12 @@ class BTreeNode implements Serializable {
         sibling.n = sibling.n - 1;
     }
 
-    private void borrowFromPrev(int idx) {
-        BTreeNode child = children[idx];
-        BTreeNode sibling = children[idx - 1];
+    //done
+    private void borrowFromPrev(int idx) throws ReadFromDiskError {
+//        BTreeNode child = children[idx];
+//        BTreeNode sibling = children[idx - 1];
+        BTreeNode child = readFromDisk(childrenUuids[idx]);
+        BTreeNode sibling = readFromDisk(childrenUuids[idx - 1]);
 
         for (int i = child.n - 1; i >= 0; i--) {
             child.keys[i + 1] = child.keys[i];
@@ -296,6 +332,7 @@ class BTreeNode implements Serializable {
         if (!child.isLeaf) {
             for (int i = child.n; i >= 0; i--) {
                 child.children[i + 1] = child.children[i];
+                child.childrenUuids[i + 1] = child.childrenUuids[i];
             }
         }
 
@@ -304,6 +341,7 @@ class BTreeNode implements Serializable {
 
         if (!child.isLeaf) {
             child.children[0] = sibling.children[sibling.n];
+            child.childrenUuids[0] = sibling.childrenUuids[sibling.n];
         }
 
         keys[idx - 1] = sibling.keys[sibling.n - 1];
@@ -313,21 +351,27 @@ class BTreeNode implements Serializable {
         sibling.n = sibling.n - 1;
     }
 
-    private Entry getPredEntry(int idx) {
+    //done
+    private Entry getPredEntry(int idx) throws ReadFromDiskError {
+        //children[idx] should already be loaded into memory
         BTreeNode current = children[idx];
 
         while (!current.isLeaf) {
-            current = current.children[current.n];
+//            current = current.children[current.n];
+            current = BTreeNode.readFromDisk(current.childrenUuids[current.n]);
         }
 
         return new Entry(current.keys[current.n - 1], current.fieldContainer.getRow(current.n - 1));
     }
 
-    private Entry getSuccEntry(int idx) {
+    //done
+    private Entry getSuccEntry(int idx) throws ReadFromDiskError {
+        //children[idx + 1] should already be loaded into memory
         BTreeNode current = children[idx + 1];
 
         while (!current.isLeaf) {
-            current = current.children[0];
+//            current = current.children[0];
+            current = BTreeNode.readFromDisk(current.childrenUuids[0]);
         }
 
         return new Entry(current.keys[0], current.fieldContainer.getRow(0));
@@ -363,7 +407,7 @@ class BTreeNode implements Serializable {
 //        x.keys[i] = y.keys[t];
 //        x.fieldContainer.setRow(i, y.fieldContainer.getRow(t));
 //        x.n = x.n + 1;
-//        //todo disk write;
+//        //disk write;
 //    }
 
     //    public Field getKey(int i) {
