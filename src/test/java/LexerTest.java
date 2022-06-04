@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LexerTest {
     @Test
-    public void testLexer() {
+    public void testLexer() throws Exception {
         String string = "rename 123.78687 rank123 1;";
         Lexer lexer = new Lexer(string);
         Token token;

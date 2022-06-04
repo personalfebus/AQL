@@ -1,5 +1,7 @@
 package database.field;
 
+import java.util.Objects;
+
 public class CharField implements Field {
     private char value;
 
@@ -24,6 +26,19 @@ public class CharField implements Field {
     @Override
     public boolean equals(Field other) {
         return Field.super.equals(other);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        CharField charField = (CharField) o;
+        return value == charField.value;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(value);
     }
 
     @Override

@@ -2,6 +2,8 @@ package database.structures;
 
 import database.btree.BTree;
 import database.btree.Entry;
+import database.btree.exception.ReadFromDiskError;
+import database.btree.exception.WriteToDiskError;
 import database.exception.FieldNumberMismatchException;
 import database.exception.NotNullFieldNotInsideInsertException;
 import database.exception.TypeMismatchException;
@@ -17,15 +19,18 @@ import parser.ast.arithmetic.AstArithExprValue;
 import parser.ast.condition.*;
 import parser.ast.function.data.AstInsertRow;
 import parser.ast.name.AstFieldName;
-import parser.ast.name.AstFieldReference;
 import parser.ast.value.AstValue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class Table {
     private static final Logger log = LoggerFactory.getLogger(Table.class.getName());
     private static final int T = 10;
+
+    private final UUID databaseUuid;
+    private final UUID tableUuid;
 
     private BTree table;
     private List<Index> indices;
@@ -35,7 +40,9 @@ public class Table {
     private List<TableFieldInformation> fieldInformation;
     private BigSerialDefaultValue surrogate;
 
-    public Table(String tableName, String schemaName, List<TableFieldInformation> fieldInformation) {
+    public Table(UUID databaseUuid, String tableName, String schemaName, List<TableFieldInformation> fieldInformation) throws WriteToDiskError {
+        this.tableUuid = UUID.randomUUID();
+        this.databaseUuid = databaseUuid;
         this.numberOfFields = fieldInformation.size();
         table = new BTree(T, numberOfFields);
         indices = new ArrayList<>();
@@ -64,7 +71,7 @@ public class Table {
         return numberOfFields;
     }
 
-    public void insertValues(List<AstFieldName> columnList, List<AstInsertRow> rowList) throws UnknownFieldException, FieldNumberMismatchException, TypeMismatchException, NotNullFieldNotInsideInsertException {
+    public void insertValues(List<AstFieldName> columnList, List<AstInsertRow> rowList) throws UnknownFieldException, FieldNumberMismatchException, TypeMismatchException, NotNullFieldNotInsideInsertException, WriteToDiskError, ReadFromDiskError {
         assertColumnList(columnList);
 
         for (AstInsertRow insertRow : rowList) {
@@ -110,7 +117,7 @@ public class Table {
         }
     }
 
-    public List<SelectOutputRow> selectValue(List<AstFieldName> columnList, AstCondition condition) throws TypeMismatchException, UnknownFieldException {
+    public List<SelectOutputRow> selectValue(List<AstFieldName> columnList, AstCondition condition) throws TypeMismatchException, UnknownFieldException, ReadFromDiskError {
         List<SelectOutputRow> result = new ArrayList<>();
 
         assertColumnList(columnList);
@@ -134,7 +141,7 @@ public class Table {
         return result;
     }
 
-    public Entry selectEqPrKey(List<AstFieldName> columnList, AstCondition condition) throws TypeMismatchException {
+    public Entry selectEqPrKey(List<AstFieldName> columnList, AstCondition condition) throws TypeMismatchException, ReadFromDiskError {
         String fieldName = "";
         Field key = null;
         String op = "";

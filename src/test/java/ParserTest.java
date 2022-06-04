@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ParserTest {
     @Test
-    public void testParser() throws IOException {
+    public void testParser() throws Exception {
         Path filePath = Path.of("src/test/resources/test.aql");
         String input = new String(Files.readAllBytes(filePath));
         Parser parser = new Parser(input);

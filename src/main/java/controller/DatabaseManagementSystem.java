@@ -1,16 +1,12 @@
 package controller;
 
 import database.Database;
-import database.btree.BTree;
-import database.btree.BTreeNode;
 import database.field.*;
-import database.structures.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import parser.IParser;
 import parser.Parser;
 import parser.ast.AstProgram;
-import parser.ast.function.AstFunction;
 import parser.exception.BadArithmeticExpressionException;
 import parser.exception.BadConditionExpressionException;
 import parser.exception.SyntaxException;
@@ -22,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Контроллер СУБД
@@ -41,28 +38,29 @@ public class DatabaseManagementSystem {
             log.error("Error with stdin",e);
         }
 
-        while (input != null) {
+        while (!Objects.equals(input, "shutdown")) {
             Path fileName = Path.of("queries/" + input);
-            String queries = null;
+
             try {
-                queries = Files.readString(fileName);
+                String queries = Files.readString(fileName);
+                IParser parser = new Parser(queries);
+                AstProgram program = parser.parse();
+                program.execute(database);
+            }  catch (SyntaxException | BadArithmeticExpressionException | BadConditionExpressionException e) {
+                log.error("Error while parsing queries", e);
             } catch (IOException e) {
                 log.error("Could not find file", e);
             }
-            IParser parser = new Parser(queries);
-            AstProgram program = null;
-            try {
-                program = parser.parse();
-                program.execute(database);
-            } catch (SyntaxException | BadArithmeticExpressionException | BadConditionExpressionException e) {
-                log.error("Error while parsing queries", e);
-            }
 
             //step to the next input file name
-            try {
-                input = in.readLine();
-            } catch (IOException e) {
-                log.error("Error with stdin",e);
+            input = null;
+
+            while (input == null) {
+                try {
+                    input = in.readLine();
+                } catch (IOException e) {
+                    log.error("Error with reading next command from stdin", e);
+                }
             }
         }
 

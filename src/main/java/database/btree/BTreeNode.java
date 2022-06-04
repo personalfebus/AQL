@@ -1,21 +1,35 @@
 package database.btree;
 
+import database.btree.exception.ReadFromDiskError;
+import database.btree.exception.WriteToDiskError;
 import database.field.Field;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.UUID;
 
-public class BTreeNode implements Serializable {
+class BTreeNode implements Serializable {
     private final static Logger log = LoggerFactory.getLogger(BTreeNode.class.getName());
+    private final static String pathPrefix = "binaries/";
 
+    //Uuid для записи на диск
+    public final UUID uuid;
     public final Field[] keys;
-    transient public FieldContainer fieldContainer;
+    //Контейнер значений соответствующих ключам (transient?)
+    public FieldContainer fieldContainer;
     //minimum number of children
     public final int t;
     //количество полей
     public final int numberOfFields;
-    public final BTreeNode[] children;
+    //дочерние вершины дерева
+    public final transient BTreeNode[] children;
+    public final UUID[] childrenUuids;
     //количество ключей в ноде на данный момент
     public int n;
     //является ли вершина лиственной
@@ -27,16 +41,41 @@ public class BTreeNode implements Serializable {
         this.isLeaf = isLeaf;
         keys = new Field[2*t - 1];
         children = new BTreeNode[2*t];
+        childrenUuids = new UUID[2*t];
         this.fieldContainer = new FieldContainer(2*t - 1, numberOfFields);
         this.n = n;
+        this.uuid = UUID.randomUUID();
     }
 
-    public void traverse() {
+    public static BTreeNode readFromDisk(UUID uuid) throws ReadFromDiskError {
+        try {
+            FileInputStream fileInputStream = new FileInputStream(pathPrefix + uuid.toString());
+            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            return (BTreeNode) objectInputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new ReadFromDiskError(e);
+        }
+    }
+
+    public static void writeToDisk(UUID uuid, BTreeNode node) throws WriteToDiskError {
+        try {
+            FileOutputStream fileOutputStream = new FileOutputStream(pathPrefix + uuid.toString());
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+            objectOutputStream.writeObject(node);
+        } catch (IOException e) {
+            throw new WriteToDiskError(e);
+        }
+    }
+
+    public void traverse() throws ReadFromDiskError {
         for (int i = 0; i < n; i++) {
             if (!isLeaf) {
+                children[i] = readFromDisk(childrenUuids[i]);
                 children[i].traverse();
+                children[i] = null;
             }
             System.out.println("-----------------");
+            System.out.println("Uuid: " + uuid);
             System.out.println("Key: " + keys[i]);
 
             System.out.println("Values:");
@@ -47,11 +86,13 @@ public class BTreeNode implements Serializable {
         }
 
         if (!isLeaf) {
+            children[n] = readFromDisk(childrenUuids[n]);
             children[n].traverse();
+            children[n] = null;
         }
     }
 
-    public BTreeNode searchByKey(Field key) {
+    public BTreeNode searchByKey(Field key) throws ReadFromDiskError {
         int i = 0;
 
         while (i < n && key.compareTo(keys[i]) > 0) {
@@ -66,10 +107,18 @@ public class BTreeNode implements Serializable {
             return null;
         }
 
-        return children[i].searchByKey(key);
+        children[i] = readFromDisk(childrenUuids[i]);
+        BTreeNode result = children[i].searchByKey(key);
+        children[i] = null;
+        return result;
     }
 
-    public Entry getEntryByKey(Field key) {
+    /**
+     * Получить пару ключ-значения по ключу
+     * @param key Ключ
+     * @return Ключ-значения
+     */
+    public Entry getEntryByKey(Field key) throws ReadFromDiskError {
         int i = 0;
 
         while (i < n && key.compareTo(keys[i]) > 0) {
@@ -84,12 +133,16 @@ public class BTreeNode implements Serializable {
             return null;
         }
 
-        return children[i].getEntryByKey(key);
+        children[i] = readFromDisk(childrenUuids[i]);
+        Entry result = children[i].getEntryByKey(key);
+        children[i] = null;
+        return result;
     }
 
     /**
-     * @param key Key
-     * @return position in node
+     * Найти позицию ключа в вершине дерева
+     * @param key Ключ
+     * @return Позиция
      */
     private int findKey(Field key) {
         int idx = 0;
@@ -99,6 +152,10 @@ public class BTreeNode implements Serializable {
         return idx;
     }
 
+    /**
+     * Удалить ключ и соответсвующие ему значения из вершины
+     * @param key Ключ
+     */
     public void remove(Field key) {
         int idx = findKey(key);
 

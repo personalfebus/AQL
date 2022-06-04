@@ -1,6 +1,8 @@
 package database.field;
 
-public interface Field {
+import java.io.Serializable;
+
+public interface Field extends Serializable {
     String getClazz();
     default int compareTo(Field other) {
         return Fields.compare(this, other);

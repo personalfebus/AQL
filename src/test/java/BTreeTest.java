@@ -1,16 +1,19 @@
 import database.btree.BTree;
 import database.btree.Entry;
+import database.btree.exception.WriteToDiskError;
 import database.field.DoubleField;
 import database.field.Field;
 import database.field.IntField;
 import database.field.LongField;
 import org.junit.jupiter.api.Test;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class BTreeTest {
     @Test
-    public void testBTree() {
+    public void testBTree() throws Exception {
         BTree bTree = new BTree(2, 2);
 
         for (int i = 0; i < 100; i++) {

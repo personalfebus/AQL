@@ -4,24 +4,29 @@ import database.structures.Table;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class Database {
     private final List<Table> tables;
     private final String databaseName;
+    private final UUID databaseUuid;
 
     public Database(String databaseName) {
         this.databaseName = databaseName;
         this.tables = new ArrayList<>();
+        this.databaseUuid = UUID.randomUUID();
     }
 
     public Database() {
         this.databaseName = "aql";
         this.tables = new ArrayList<>();
+        this.databaseUuid = UUID.randomUUID();
     }
 
     public Database(List<Table> tables) {
         this.tables = tables;
         this.databaseName = "aql";
+        this.databaseUuid = UUID.randomUUID();
     }
 
     public void addTable(Table table) {
@@ -49,5 +54,9 @@ public class Database {
         }
 
         return null;
+    }
+
+    public UUID getDatabaseUuid() {
+        return databaseUuid;
     }
 }

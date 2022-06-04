@@ -1,6 +1,7 @@
 package parser.ast.function.table;
 
 import database.Database;
+import database.btree.exception.WriteToDiskError;
 import database.structures.Table;
 import database.structures.TableFieldInformation;
 import org.slf4j.Logger;
@@ -64,8 +65,13 @@ public class AstCreateTableFunction implements AstFunction {
                 }
             }
 
-            database.addTable(new Table(tableName.getTableName(), tableName.getSchemaName(), tableFieldInformationList));
-            log.info("Table created successfully {}", tableName);
+            try {
+                database.addTable(new Table(database.getDatabaseUuid(), tableName.getTableName(), tableName.getSchemaName(), tableFieldInformationList));
+                log.info("Table created successfully {}", tableName);
+            } catch (WriteToDiskError e) {
+                log.error("Internal filesystem error occurred during command execution", e);
+            }
+
         }
     }
 }

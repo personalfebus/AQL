@@ -1,6 +1,8 @@
 package parser.ast.function.data;
 
 import database.Database;
+import database.btree.exception.ReadFromDiskError;
+import database.btree.exception.WriteToDiskError;
 import database.exception.FieldNumberMismatchException;
 import database.exception.NotNullFieldNotInsideInsertException;
 import database.exception.TypeMismatchException;
@@ -55,6 +57,8 @@ public class AstInsertFunction implements AstFunction {
                 log.info("Values inserted successfully into table {}", tableName);
             } catch (UnknownFieldException | FieldNumberMismatchException | TypeMismatchException | NotNullFieldNotInsideInsertException e) {
                 log.error("Value insert crushed", e);
+            } catch (WriteToDiskError | ReadFromDiskError e) {
+                log.error("Internal filesystem error occurred during command execution", e);
             }
         } else {
             log.error("Table does not exist");

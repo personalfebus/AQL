@@ -9,7 +9,7 @@ public class FieldContainer implements Serializable {
 
     private final static String pathPrefix = "binaries/";
 
-    public static FieldContainer factory(String path) throws IOException, ClassNotFoundException {
+    public static FieldContainer readFromDisk(String path) throws IOException, ClassNotFoundException {
         FileInputStream fileInputStream = new FileInputStream(pathPrefix + path);
         ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
         return (FieldContainer) objectInputStream.readObject();

@@ -1,37 +1,79 @@
 package database.btree;
 
+import database.btree.exception.ReadFromDiskError;
+import database.btree.exception.WriteToDiskError;
 import database.field.Field;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
+import javax.swing.plaf.basic.BasicTextAreaUI;
+import java.io.*;
+import java.util.UUID;
 
 public class BTree implements Serializable {
     private final static Logger log = LoggerFactory.getLogger(BTree.class.getName());
+    private final static String pathPrefix = "binaries/";
 
+    private final UUID uuid;
+    private UUID rootUuid;
     private BTreeNode root;
+
     //minimum number of children of one node
     private final int t;
     private final int numberOfFields;
 
     public BTree(BTreeNode root, int t, int numberOfFields) {
+        this.uuid = UUID.randomUUID();
         this.root = root;
+        this.rootUuid = root.uuid;
         this.t = t;
         this.numberOfFields = numberOfFields;
     }
 
-    public BTree(int t, int numberOfFields) {
+    public BTree(int t, int numberOfFields) throws WriteToDiskError {
+        this.uuid = UUID.randomUUID();
         this.t = t;
         this.numberOfFields = numberOfFields;
-        this.root = new BTreeNode(t, numberOfFields, true, 0);
-        //todo write disk
+        BTreeNode x = new BTreeNode(t, numberOfFields, true, 0);
+        BTreeNode.writeToDisk(x.uuid, x);
+        this.root = x;
+        this.rootUuid = x.uuid;
+
+//        //write root to disk
+//        try {
+//            FileOutputStream fileOutputStream = new FileOutputStream("binaries/" + uuid);
+//            ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+//            objectOutputStream.writeObject(root);
+//        } catch (IOException e) {
+//            log.error("Filesystem unexpected behavior critical error", e);
+//        }
     }
 
-    public void traverse() {
+    public static BTree readFromDisk(UUID uuid) throws ReadFromDiskError {
+        try {
+            FileInputStream fileInputStream = new FileInputStream(pathPrefix + uuid.toString());
+            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            return (BTree) objectInputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new ReadFromDiskError(e);
+        }
+    }
+
+    public static void writeToDisk(UUID uuid, BTree node) throws WriteToDiskError {
+        try {
+            FileOutputStream fileOutputStream = new FileOutputStream(pathPrefix + uuid.toString());
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+            objectOutputStream.writeObject(node);
+        } catch (IOException e) {
+            throw new WriteToDiskError(e);
+        }
+    }
+
+    public void traverse() throws ReadFromDiskError {
         root.traverse();
     }
 
-    public BTreeNode searchByKey(Field key) {
+    public BTreeNode searchByKey(Field key) throws ReadFromDiskError {
         if (root == null) {
             return null;
         } else {
@@ -39,7 +81,7 @@ public class BTree implements Serializable {
         }
     }
 
-    public Entry getEntryByKey(Field key) {
+    public Entry getEntryByKey(Field key) throws ReadFromDiskError {
         if (root == null) {
             return null;
         } else {
@@ -47,8 +89,12 @@ public class BTree implements Serializable {
         }
     }
 
-    public void splitChild(BTreeNode x, int i) {
+    public void splitChild(BTreeNode x, int i) throws ReadFromDiskError, WriteToDiskError {
+        //read from disk
+        x.children[i] = BTreeNode.readFromDisk(x.childrenUuids[i]);
         BTreeNode y = x.children[i];
+        x.children[i] = null;
+
         BTreeNode z = new BTreeNode(y.t, y.numberOfFields, y.isLeaf, t - 1);
 
         for (int j = 0; j < t - 1; j++) {
@@ -58,17 +104,20 @@ public class BTree implements Serializable {
 
         if (!y.isLeaf) {
             for (int j = 0; j < t; j++) {
-                z.children[j] = y.children[j + t];
+//                z.children[j] = y.children[j + t];
+                z.childrenUuids[j] = y.childrenUuids[j + t];
             }
         }
 
         y.n = t - 1;
 
         for (int j = x.n; j >= i + 1; j--) {
-            x.children[j + 1] = x.children[j];
+//            x.children[j + 1] = x.children[j];
+            x.childrenUuids[j + 1] = x.childrenUuids[j];
         }
 
-        x.children[i + 1] = z;
+//        x.children[i + 1] = z;
+        x.childrenUuids[i + 1] = z.uuid;
 
         for (int j = x.n - 1; j >= i; j--) {
             x.keys[j + 1] = x.keys[j];
@@ -78,19 +127,27 @@ public class BTree implements Serializable {
         x.keys[i] = y.keys[t - 1];
         x.fieldContainer.setRow(i, y.fieldContainer.getRow(t - 1));
         x.n = x.n + 1;
-        //todo disk write;
+
+        //write to disk
+        BTreeNode.writeToDisk(y.uuid, y);
+        BTreeNode.writeToDisk(x.uuid, x);
+        BTreeNode.writeToDisk(z.uuid, z);
     }
 
-    public void insert(Field key, Field[] values) {
+    public void insert(Field key, Field[] values) throws WriteToDiskError, ReadFromDiskError {
         if (root == null) {
-            root = new BTreeNode(t, numberOfFields, true, 0);
+            BTreeNode x = new BTreeNode(t, numberOfFields, true, 0);
+            BTreeNode.writeToDisk(x.uuid, x);
+            root = x;
+            rootUuid = x.uuid;
         }
 
         BTreeNode r = root;
         if (root.n == 2*t - 1) {
             BTreeNode s = new BTreeNode(t, numberOfFields, false, 0);
             root = s;
-            s.children[0] = r;
+//            s.children[0] = r;
+            s.childrenUuids[0] = r.uuid;
             splitChild(s, 0);
             insertNonFull(s, key, values);
         } else {
@@ -115,7 +172,7 @@ public class BTree implements Serializable {
         }
     }
 
-    private void insertNonFull(BTreeNode x, Field key, Field[] values) {
+    private void insertNonFull(BTreeNode x, Field key, Field[] values) throws ReadFromDiskError, WriteToDiskError {
         int i = x.n - 1;
 
         if (x.isLeaf) {
@@ -127,13 +184,17 @@ public class BTree implements Serializable {
             x.keys[i + 1] = key;
             x.fieldContainer.setRow(i + 1, values);
             x.n = x.n + 1;
-            //todo disk write;
+
+            //write to disk;
+            BTreeNode.writeToDisk(x.uuid, x);
         } else {
             while (i >= 0 && key.compareTo(x.keys[i]) < 0) {
                 i--;
             }
             i++;
-            //todo disk read;
+
+            //read from disk;
+            x.children[i] = BTreeNode.readFromDisk(x.childrenUuids[i]);
 
             if (x.children[i].n == 2*t - 1) {
                 splitChild(x, i);
@@ -143,6 +204,9 @@ public class BTree implements Serializable {
                 }
             }
             insertNonFull(x.children[i], key, values);
+
+            //remove from memory
+            x.children[i] = null;
         }
     }
 

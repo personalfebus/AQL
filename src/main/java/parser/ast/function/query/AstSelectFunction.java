@@ -1,6 +1,7 @@
 package parser.ast.function.query;
 
 import database.Database;
+import database.btree.exception.ReadFromDiskError;
 import database.exception.TypeMismatchException;
 import database.exception.UnknownFieldException;
 import database.structures.SelectOutputRow;
@@ -56,6 +57,8 @@ public class AstSelectFunction implements AstFunction {
                 System.out.println(rows);
             } catch (TypeMismatchException | UnknownFieldException e) {
                 log.error("Error in select", e);
+            } catch (ReadFromDiskError e) {
+                log.error("Internal filesystem error occurred during command execution", e);
             }
         } else {
             log.error("Table does not exist");
