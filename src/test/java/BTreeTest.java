@@ -33,14 +33,16 @@ class BTreeTest {
 
 //        bTree.traverse();
 
-//        for (int i = 0; i < 50; i++) {
-//            Field key1 = new IntField(i);
-//            bTree.remove(key1);
-//        }
-//
-//        Entry entry4 = bTree.getEntryByKey(new IntField(5));
-//        assertNull(entry4);
-//        Entry entry5 = bTree.getEntryByKey(new IntField(95));
-//        assertEquals(new LongField(95L), entry5.getValues()[1]);
+        for (int i = 0; i < 50; i++) {
+            Field key1 = new IntField(i);
+            bTree.remove(key1);
+        }
+
+        Entry entry4 = bTree.getEntryByKey(new IntField(5));
+        assertNull(entry4);
+        Entry entry5 = bTree.getEntryByKey(new IntField(95));
+        assertEquals(new LongField(95L), entry5.getValues()[1]);
+
+        bTree.traverse();
     }
 }

@@ -41,15 +41,6 @@ public class BTree implements Serializable {
         BTreeNode.writeToDisk(x.uuid, x);
         this.root = x;
         this.rootUuid = x.uuid;
-
-//        //write root to disk
-//        try {
-//            FileOutputStream fileOutputStream = new FileOutputStream("binaries/" + uuid);
-//            ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
-//            objectOutputStream.writeObject(root);
-//        } catch (IOException e) {
-//            log.error("Filesystem unexpected behavior critical error", e);
-//        }
     }
 
     public static BTree readFromDisk(UUID uuid) throws ReadFromDiskError {
@@ -95,9 +86,8 @@ public class BTree implements Serializable {
         }
     }
 
-    @ReadFromDiskRequired
     @WriteToDiskRequired
-    public void splitChild(BTreeNode x, int i) throws ReadFromDiskError, WriteToDiskError {
+    public void splitChild(BTreeNode x, int i) throws WriteToDiskError {
         //x.children[i] should already be read from disk
         BTreeNode y = x.children[i];
 
@@ -173,12 +163,13 @@ public class BTree implements Serializable {
 
     @ReadFromDiskRequired
     @WriteToDiskRequired
-    public void remove(Field key) throws ReadFromDiskError {
+    public void remove(Field key) throws ReadFromDiskError, WriteToDiskError {
         if (root == null) {
             log.error("Remove from empty tree");
             return;
         }
         root.remove(key);
+        BTreeNode.writeToDisk(root.uuid, root);
 
         if (root.n == 0) {
             BTreeNode old = root;
@@ -230,17 +221,4 @@ public class BTree implements Serializable {
 
         x.children = new BTreeNode[2*t];
     }
-
-//    public void BTreeInsert(Field key, Field[] values) {
-//        if (values.length != numberOfFields) {
-//            log.error("Incorrect number of fields in insert");
-//            return;
-//        }
-//        if (root == null) {
-//            root = new BTreeNode(t, numberOfFields, true, 0);
-//            root.setKey(0, key);
-//            root.setValues(0, values);
-//
-//        }
-//    }
 }

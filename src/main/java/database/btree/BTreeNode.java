@@ -166,13 +166,13 @@ class BTreeNode implements Serializable {
         return idx;
     }
 
-    //todo clear
     /**
      * Удалить ключ и соответсвующие ему значения из вершины
      * @param key Ключ
      */
+    @ReadFromDiskRequired
     @WriteToDiskRequired
-    public void remove(Field key) throws ReadFromDiskError {
+    public void remove(Field key) throws ReadFromDiskError, WriteToDiskError {
         int idx = findKey(key);
 
         if (idx < n && keys[idx].compareTo(key) == 0) {
@@ -195,10 +195,12 @@ class BTreeNode implements Serializable {
             if (flag && idx > n) {
                 BTreeNode x = readFromDisk(childrenUuids[idx - 1]);
                 x.remove(key);
+                writeToDisk(x.uuid, x);
 //                children[idx - 1].remove(key);
             } else {
                 BTreeNode x = readFromDisk(childrenUuids[idx]);
                 x.remove(key);
+                writeToDisk(x.uuid, x);
 //                children[idx].remove(key);
             }
         }
@@ -217,8 +219,9 @@ class BTreeNode implements Serializable {
         n--;
     }
 
+    @ReadFromDiskRequired
     @WriteToDiskRequired
-    private void removeFromNonLeaf(int idx) throws ReadFromDiskError {
+    private void removeFromNonLeaf(int idx) throws ReadFromDiskError, WriteToDiskError {
         Field k = keys[idx];
         children[idx] = readFromDisk(childrenUuids[idx]);
         children[idx + 1] = readFromDisk(childrenUuids[idx + 1]);
@@ -228,23 +231,29 @@ class BTreeNode implements Serializable {
             keys[idx] = predEntry.getKey();
             fieldContainer.setRow(idx, predEntry.getValues());
             children[idx].remove(predEntry.getKey());
+            writeToDisk(children[idx].uuid, children[idx]);
         } else if (children[idx + 1].n >= t) {
             Entry succEntry = getSuccEntry(idx);
             keys[idx] = succEntry.getKey();
             fieldContainer.setRow(idx, succEntry.getValues());
             children[idx + 1].remove(succEntry.getKey());
+            writeToDisk(children[idx + 1].uuid, children[idx + 1]);
         } else {
             merge(idx);
             children[idx].remove(k);
+            writeToDisk(children[idx].uuid, children[idx]);
         }
+
+        children[idx] = null;
+        children[idx + 1] = null;
     }
 
-    @ReadFromDiskRequired
-    private void merge(int idx) throws ReadFromDiskError {
-//        BTreeNode child = children[idx];
-//        BTreeNode sibling = children[idx + 1];
-        BTreeNode child = readFromDisk(childrenUuids[idx]);
-        BTreeNode sibling = readFromDisk(childrenUuids[idx + 1]);
+    @WriteToDiskRequired
+    private void merge(int idx) throws WriteToDiskError {
+        BTreeNode child = children[idx];
+        BTreeNode sibling = children[idx + 1];
+//        BTreeNode child = readFromDisk(childrenUuids[idx]);
+//        BTreeNode sibling = readFromDisk(childrenUuids[idx + 1]);
 
         child.keys[t - 1] = keys[idx];
         child.fieldContainer.setRow(t - 1, fieldContainer.getRow(idx));
@@ -257,7 +266,7 @@ class BTreeNode implements Serializable {
         if (!child.isLeaf) {
             for (int i = 0; i <= sibling.n; i++) {
                 child.children[i + t] = sibling.children[i];
-                child.childrenUuids[i + t] = sibling.childrenUuids[i + t];
+                child.childrenUuids[i + t] = sibling.childrenUuids[i];
             }
         }
 
@@ -279,15 +288,24 @@ class BTreeNode implements Serializable {
 
         child.n += sibling.n + 1;
         n--;
+
+        BTreeNode.writeToDisk(child.uuid, child);
+        BTreeNode.writeToDisk(sibling.uuid, sibling);
     }
 
-    private void fill(int idx) throws ReadFromDiskError {
+    @ReadFromDiskRequired
+    @WriteToDiskRequired
+    private void fill(int idx) throws ReadFromDiskError, WriteToDiskError {
         if (idx != 0) {
             children[idx - 1] = readFromDisk(childrenUuids[idx - 1]);
         }
+
+        children[idx] = readFromDisk(childrenUuids[idx]);
+
         if (idx != n) {
             children[idx + 1] = readFromDisk(childrenUuids[idx + 1]);
         }
+
         if (idx != 0 && children[idx - 1].n >= t) {
             borrowFromPrev(idx);
         } else if (idx != n && children[idx + 1].n >= t) {
@@ -299,9 +317,22 @@ class BTreeNode implements Serializable {
                 merge(idx - 1);
             }
         }
+
+        //free memory
+        if (idx != 0) {
+            children[idx - 1] = null;
+        }
+
+        children[idx] = null;
+
+        if (idx != n) {
+            children[idx + 1] = null;
+        }
     }
 
-    private void borrowFromNext(int idx) throws ReadFromDiskError {
+    @ReadFromDiskRequired
+    @WriteToDiskRequired
+    private void borrowFromNext(int idx) throws ReadFromDiskError, WriteToDiskError {
 //        BTreeNode child = children[idx];
 //        BTreeNode sibling = children[idx + 1];
         BTreeNode child = readFromDisk(childrenUuids[idx]);
@@ -338,10 +369,13 @@ class BTreeNode implements Serializable {
 
         child.n = child.n + 1;
         sibling.n = sibling.n - 1;
+        writeToDisk(child.uuid, child);
+        writeToDisk(sibling.uuid, sibling);
     }
 
-    //done
-    private void borrowFromPrev(int idx) throws ReadFromDiskError {
+    @WriteToDiskRequired
+    @ReadFromDiskRequired
+    private void borrowFromPrev(int idx) throws ReadFromDiskError, WriteToDiskError {
 //        BTreeNode child = children[idx];
 //        BTreeNode sibling = children[idx - 1];
         BTreeNode child = readFromDisk(childrenUuids[idx]);
@@ -378,86 +412,31 @@ class BTreeNode implements Serializable {
 
         child.n = child.n + 1;
         sibling.n = sibling.n - 1;
+        writeToDisk(child.uuid, child);
+        writeToDisk(sibling.uuid, sibling);
     }
 
-    //done
+    @ReadFromDiskRequired
     private Entry getPredEntry(int idx) throws ReadFromDiskError {
         //children[idx] should already be loaded into memory
         BTreeNode current = children[idx];
 
         while (!current.isLeaf) {
-//            current = current.children[current.n];
             current = BTreeNode.readFromDisk(current.childrenUuids[current.n]);
         }
 
         return new Entry(current.keys[current.n - 1], current.fieldContainer.getRow(current.n - 1));
     }
 
-    //done
+    @ReadFromDiskRequired
     private Entry getSuccEntry(int idx) throws ReadFromDiskError {
         //children[idx + 1] should already be loaded into memory
         BTreeNode current = children[idx + 1];
 
         while (!current.isLeaf) {
-//            current = current.children[0];
             current = BTreeNode.readFromDisk(current.childrenUuids[0]);
         }
 
         return new Entry(current.keys[0], current.fieldContainer.getRow(0));
     }
-
-//    public void splitChild(int i, BTreeNode x) {
-//        BTreeNode y = x.children[i];
-//        BTreeNode z = new BTreeNode(y.t, y.numberOfFields, y.isLeaf, t - 1);
-//
-//        for (int j = 1; j < t - 1; j++) {
-//            z.keys[j] = y.keys[j + t];
-//            z.fieldContainer.setRow(j, y.fieldContainer.getRow(j + t));
-//        }
-//
-//        if (!y.isLeaf) {
-//            for (int j = 1; j < t; j++) {
-//                z.children[j] = y.children[j + t];
-//            }
-//        }
-//
-//        y.n = t - 1;
-//
-//        for (int j = x.n + 1; j >= i + 1; j--) {
-//            x.children[j + 1] = x.children[j];
-//        }
-//
-//        x.children[i + 1] = z;
-//
-//        for (int j = x.n; j >= i; j--) {
-//            x.keys[j + 1] = x.keys[j];
-//            x.fieldContainer.setRow(j + 1, x.fieldContainer.getRow(j));
-//        }
-//        x.keys[i] = y.keys[t];
-//        x.fieldContainer.setRow(i, y.fieldContainer.getRow(t));
-//        x.n = x.n + 1;
-//        //disk write;
-//    }
-
-    //    public Field getKey(int i) {
-//        return keys[i];
-//    }
-//
-//    public void setKey(int i, Field key) {
-//        keys[i] = key;
-//    }
-//
-//    public Field[] getValues(int i) {
-//        return fieldContainer.getRow(i);
-//    }
-//
-//    public void setValues(int i, Field[] values) {
-//        fieldContainer.setRow(i, values);
-//    }
-//
-//    public void insertKeyAndValues(Field key, Field[] values) {
-//        int i = n;
-//
-//
-//    }
 }
