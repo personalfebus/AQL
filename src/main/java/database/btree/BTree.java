@@ -1,12 +1,14 @@
 package database.btree;
 
+import database.btree.annotation.CacheOnlyOperation;
+import database.btree.annotation.ReadFromDiskRequired;
+import database.btree.annotation.WriteToDiskRequired;
 import database.btree.exception.ReadFromDiskError;
 import database.btree.exception.WriteToDiskError;
 import database.field.Field;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.plaf.basic.BasicTextAreaUI;
 import java.io.*;
 import java.util.Arrays;
 import java.util.UUID;
@@ -70,10 +72,12 @@ public class BTree implements Serializable {
         }
     }
 
+    @ReadFromDiskRequired
     public void traverse() throws ReadFromDiskError {
         root.traverse();
     }
 
+    @ReadFromDiskRequired
     public BTreeNode searchByKey(Field key) throws ReadFromDiskError {
         if (root == null) {
             return null;
@@ -82,6 +86,7 @@ public class BTree implements Serializable {
         }
     }
 
+    @ReadFromDiskRequired
     public Entry getEntryByKey(Field key) throws ReadFromDiskError {
         if (root == null) {
             return null;
@@ -90,6 +95,8 @@ public class BTree implements Serializable {
         }
     }
 
+    @ReadFromDiskRequired
+    @WriteToDiskRequired
     public void splitChild(BTreeNode x, int i) throws ReadFromDiskError, WriteToDiskError {
         //x.children[i] should already be read from disk
         BTreeNode y = x.children[i];
@@ -99,12 +106,18 @@ public class BTree implements Serializable {
         for (int j = 0; j < t - 1; j++) {
             z.keys[j] = y.keys[j + t];
             z.fieldContainer.setRow(j, y.fieldContainer.getRow(j + t));
+            //free memory
+            y.keys[j + t] = null;
+            y.fieldContainer.setRow(j + t, null);
         }
 
         if (!y.isLeaf) {
             for (int j = 0; j < t; j++) {
                 z.children[j] = y.children[j + t];
                 z.childrenUuids[j] = y.childrenUuids[j + t];
+                //free memory
+                y.children[j + t] = null;
+                y.childrenUuids[j + t] = null;
             }
         }
 
@@ -124,6 +137,8 @@ public class BTree implements Serializable {
         }
 
         x.keys[i] = y.keys[t - 1];
+        //free memory
+        y.keys[t - 1] = null;
         x.fieldContainer.setRow(i, y.fieldContainer.getRow(t - 1));
         x.n = x.n + 1;
 
@@ -133,6 +148,8 @@ public class BTree implements Serializable {
         BTreeNode.writeToDisk(z.uuid, z);
     }
 
+    @ReadFromDiskRequired
+    @WriteToDiskRequired
     public void insert(Field key, Field[] values) throws WriteToDiskError, ReadFromDiskError {
         if (root == null) {
             BTreeNode x = new BTreeNode(t, numberOfFields, true, 0);
@@ -154,6 +171,8 @@ public class BTree implements Serializable {
         }
     }
 
+    @ReadFromDiskRequired
+    @WriteToDiskRequired
     public void remove(Field key) throws ReadFromDiskError {
         if (root == null) {
             log.error("Remove from empty tree");
@@ -171,6 +190,9 @@ public class BTree implements Serializable {
         }
     }
 
+
+    @ReadFromDiskRequired
+    @WriteToDiskRequired
     private void insertNonFull(BTreeNode x, Field key, Field[] values) throws ReadFromDiskError, WriteToDiskError {
         int i = x.n - 1;
 
