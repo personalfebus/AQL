@@ -2,6 +2,8 @@ package database.structures.value;
 
 import database.field.Field;
 
-public interface FieldDefaultValue {
+import java.io.Serializable;
+
+public interface FieldDefaultValue extends Serializable {
     Field getNext();
 }

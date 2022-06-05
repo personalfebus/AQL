@@ -3,7 +3,9 @@ package database.structures;
 import database.field.Field;
 import database.structures.value.FieldDefaultValue;
 
-public class TableFieldInformation {
+import java.io.Serializable;
+
+public class TableFieldInformation implements Serializable {
     private String fieldName;
     private FieldDefaultValue defaultValue;
     private String fieldType;

@@ -11,6 +11,7 @@ import database.exception.UnknownFieldException;
 import database.field.Field;
 import database.field.Fields;
 import database.structures.value.BigSerialDefaultValue;
+import lombok.Cleanup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import parser.ast.arithmetic.AstArithExpr;
@@ -21,12 +22,19 @@ import parser.ast.function.data.AstInsertRow;
 import parser.ast.name.AstFieldName;
 import parser.ast.value.AstValue;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class Table {
+public class Table implements Serializable {
     private static final Logger log = LoggerFactory.getLogger(Table.class.getName());
+    private final static String pathPrefix = "binaries/";
     private static final int T = 10;
 
     private final UUID databaseUuid;
@@ -45,6 +53,7 @@ public class Table {
         this.databaseUuid = databaseUuid;
         this.numberOfFields = fieldInformation.size();
         table = new BTree(T, numberOfFields);
+        BTree.writeToDisk(tableUuid, table);
         indices = new ArrayList<>();
         this.tableName = tableName;
         this.schemaName = schemaName;
@@ -56,6 +65,26 @@ public class Table {
                 indices.add(new Index()); //todo
                 tableFieldInformation.setIndexPosition(indices.size() - 1);
             }
+        }
+    }
+
+    public static Table readFromDisk(UUID uuid) throws ReadFromDiskError {
+        try {
+            @Cleanup FileInputStream fileInputStream = new FileInputStream(pathPrefix + uuid.toString());
+            @Cleanup ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            return (Table) objectInputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new ReadFromDiskError(e);
+        }
+    }
+
+    public static void writeToDisk(UUID uuid, Table table) throws WriteToDiskError {
+        try {
+            @Cleanup FileOutputStream fileOutputStream = new FileOutputStream(pathPrefix + uuid.toString());
+            @Cleanup ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+            objectOutputStream.writeObject(table);
+        } catch (IOException e) {
+            throw new WriteToDiskError(e);
         }
     }
 

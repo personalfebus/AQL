@@ -3,7 +3,9 @@ package database.structures.value;
 import database.field.Field;
 import database.field.LongField;
 
-public class BigSerialDefaultValue implements FieldDefaultValue {
+import java.io.Serializable;
+
+public class BigSerialDefaultValue implements FieldDefaultValue, Serializable {
     private long value = 0L;
 
     @Override

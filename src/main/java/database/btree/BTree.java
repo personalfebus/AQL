@@ -6,6 +6,7 @@ import database.btree.annotation.WriteToDiskRequired;
 import database.btree.exception.ReadFromDiskError;
 import database.btree.exception.WriteToDiskError;
 import database.field.Field;
+import lombok.Cleanup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,19 +46,19 @@ public class BTree implements Serializable {
 
     public static BTree readFromDisk(UUID uuid) throws ReadFromDiskError {
         try {
-            FileInputStream fileInputStream = new FileInputStream(pathPrefix + uuid.toString());
-            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            @Cleanup FileInputStream fileInputStream = new FileInputStream(pathPrefix + uuid.toString());
+            @Cleanup ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             return (BTree) objectInputStream.readObject();
         } catch (IOException | ClassNotFoundException e) {
             throw new ReadFromDiskError(e);
         }
     }
 
-    public static void writeToDisk(UUID uuid, BTree node) throws WriteToDiskError {
+    public static void writeToDisk(UUID uuid, BTree tree) throws WriteToDiskError {
         try {
-            FileOutputStream fileOutputStream = new FileOutputStream(pathPrefix + uuid.toString());
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
-            objectOutputStream.writeObject(node);
+            @Cleanup FileOutputStream fileOutputStream = new FileOutputStream(pathPrefix + uuid.toString());
+            @Cleanup ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+            objectOutputStream.writeObject(tree);
         } catch (IOException e) {
             throw new WriteToDiskError(e);
         }
