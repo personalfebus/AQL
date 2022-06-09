@@ -2,14 +2,12 @@ package database.btree.cache;
 
 import database.btree.Entry;
 import database.field.Field;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
 
+@Slf4j
 public class CacheBTree implements Serializable {
-    private final static Logger log = LoggerFactory.getLogger(CacheBTree.class.getName());
-
     private CacheBTreeNode root;
     //minimum number of children of one node
     private final int t;

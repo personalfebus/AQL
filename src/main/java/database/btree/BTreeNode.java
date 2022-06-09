@@ -7,8 +7,7 @@ import database.btree.exception.ReadFromDiskError;
 import database.btree.exception.WriteToDiskError;
 import database.field.Field;
 import lombok.Cleanup;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -18,8 +17,8 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.UUID;
 
+@Slf4j
 class BTreeNode implements Serializable {
-    private final static Logger log = LoggerFactory.getLogger(BTreeNode.class.getName());
     private final static String pathPrefix = "binaries/";
 
     //Uuid для записи на диск

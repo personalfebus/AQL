@@ -67,7 +67,7 @@ public class AstCreateTableFunction implements AstFunction {
 
             try {
                 database.addTable(new Table(database.getDatabaseUuid(), tableName.getTableName(), tableName.getSchemaName(), tableFieldInformationList));
-                Database.writeToDisk(database.getDatabaseUuid(), database);
+                Database.writeToDisk(database.getDatabaseUuid(), database, database.getPath());
                 log.info("Table created successfully {}", tableName);
             } catch (WriteToDiskError e) {
                 log.error("Internal filesystem error occurred during command execution", e);

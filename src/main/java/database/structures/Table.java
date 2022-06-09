@@ -12,8 +12,7 @@ import database.field.Field;
 import database.field.Fields;
 import database.structures.value.BigSerialDefaultValue;
 import lombok.Cleanup;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import parser.ast.arithmetic.AstArithExpr;
 import parser.ast.arithmetic.AstArithExprIdentConstant;
 import parser.ast.arithmetic.AstArithExprValue;
@@ -32,8 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 public class Table implements Serializable {
-    private static final Logger log = LoggerFactory.getLogger(Table.class.getName());
     private final static String pathPrefix = "binaries/";
     private static final int T = 10;
 

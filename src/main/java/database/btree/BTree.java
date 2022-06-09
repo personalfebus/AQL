@@ -1,21 +1,23 @@
 package database.btree;
 
-import database.btree.annotation.CacheOnlyOperation;
 import database.btree.annotation.ReadFromDiskRequired;
 import database.btree.annotation.WriteToDiskRequired;
 import database.btree.exception.ReadFromDiskError;
 import database.btree.exception.WriteToDiskError;
 import database.field.Field;
 import lombok.Cleanup;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
-import java.io.*;
-import java.util.Arrays;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.UUID;
 
+@Slf4j
 public class BTree implements Serializable {
-    private final static Logger log = LoggerFactory.getLogger(BTree.class.getName());
     private final static String pathPrefix = "binaries/";
 
     private final UUID uuid;

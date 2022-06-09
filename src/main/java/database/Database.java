@@ -21,34 +21,39 @@ public class Database implements Serializable {
     private final String databaseName;
     private final UUID databaseUuid;
     private final static String pathPrefix = "binaries/";
+    private final String path;
 
     public Database(String databaseName) {
         this.databaseName = databaseName;
         this.tables = new ArrayList<>();
         this.databaseUuid = UUID.nameUUIDFromBytes(databaseName.getBytes(StandardCharsets.UTF_8));
+        this.path = pathPrefix + this.databaseName + "/";
     }
 
     public Database() {
         this.databaseName = "aql";
         this.tables = new ArrayList<>();
         this.databaseUuid = UUID.nameUUIDFromBytes(databaseName.getBytes(StandardCharsets.UTF_8));
+        this.path = pathPrefix + this.databaseName + "/";
     }
 
     public Database(List<Table> tables) {
         this.tables = tables;
         this.databaseName = "aql";
         this.databaseUuid = UUID.nameUUIDFromBytes(databaseName.getBytes(StandardCharsets.UTF_8));
+        this.path = pathPrefix + this.databaseName + "/";
     }
 
     public Database(List<Table> tables, String databaseName) {
         this.tables = tables;
         this.databaseName = databaseName;
         this.databaseUuid = UUID.nameUUIDFromBytes(databaseName.getBytes(StandardCharsets.UTF_8));
+        this.path = pathPrefix + this.databaseName + "/";
     }
 
-    public static Database readFromDisk(UUID uuid) throws ReadFromDiskError {
+    public static Database readFromDisk(UUID uuid, String name) throws ReadFromDiskError {
         try {
-            @Cleanup FileInputStream fileInputStream = new FileInputStream(pathPrefix + uuid.toString());
+            @Cleanup FileInputStream fileInputStream = new FileInputStream(pathPrefix + name); //uuid
             @Cleanup ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             return (Database) objectInputStream.readObject();
         } catch (IOException | ClassNotFoundException e) {
@@ -56,9 +61,9 @@ public class Database implements Serializable {
         }
     }
 
-    public static void writeToDisk(UUID uuid, Database database) throws WriteToDiskError {
+    public static void writeToDisk(UUID uuid, Database database, String path) throws WriteToDiskError {
         try {
-            @Cleanup FileOutputStream fileOutputStream = new FileOutputStream(pathPrefix + uuid.toString());
+            @Cleanup FileOutputStream fileOutputStream = new FileOutputStream(path); //uuid
             @Cleanup ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
             objectOutputStream.writeObject(database);
         } catch (IOException e) {
@@ -95,5 +100,9 @@ public class Database implements Serializable {
 
     public UUID getDatabaseUuid() {
         return databaseUuid;
+    }
+
+    public String getPath() {
+        return path;
     }
 }

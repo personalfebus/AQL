@@ -3,16 +3,14 @@ package database.btree.cache;
 import database.btree.Entry;
 import database.btree.FieldContainer;
 import database.field.Field;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
 
-public class CacheBTreeNode implements Serializable {
-    private final static Logger log = LoggerFactory.getLogger(CacheBTreeNode.class.getName());
-
+@Slf4j
+class CacheBTreeNode implements Serializable {
     public final Field[] keys;
-    transient public FieldContainer fieldContainer;
+    public FieldContainer fieldContainer;
     //minimum number of children
     public final int t;
     //количество полей
