@@ -28,9 +28,11 @@ public class AstForeignKeyConstraint implements AstConstraint {
         return AstForeignKeyConstraint.class.getName();
     }
 
-    //todo
     @Override
     public void emplaceConstraint(TableFieldInformation information, AstType type) throws TypeMismatchException {
         information.setForeign(true);
+        information.setReferenceSchemaName(referencedTableName.getSchemaName());
+        information.setReferencedTableName(referencedTableName.getTableName());
+        information.setReferencedFieldName(referenceFieldName.getName());
     }
 }

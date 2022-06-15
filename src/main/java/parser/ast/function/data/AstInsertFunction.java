@@ -54,6 +54,7 @@ public class AstInsertFunction implements AstFunction {
 
             try {
                 table.insertValues(columnList, rowList);
+                Database.writeToDisk(database.getDatabaseUuid(), database, database.getPath());
                 log.info("Values inserted successfully into table {}", tableName);
             } catch (UnknownFieldException | FieldNumberMismatchException | TypeMismatchException | NotNullFieldNotInsideInsertException e) {
                 log.error("Value insert crushed", e);

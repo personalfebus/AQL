@@ -83,7 +83,7 @@ public class DatabaseManagementSystem {
                     try {
                         currentDatabase.delete();
                     } catch (ReadFromDiskError e) {
-                        log.error("Problems with file system", e);
+                        log.error("File system error", e);
                     }
                     mode = 0;
                     System.out.println("======= Now enter database management commands =======");
@@ -95,11 +95,15 @@ public class DatabaseManagementSystem {
                         IParser parser = new Parser(queries);
                         AstProgram program = parser.parse();
                         program.execute(currentDatabase);
+                        //Database.writeToDisk(currentDatabase.getDatabaseUuid(), currentDatabase, currentDatabase.getPath());
                     } catch (SyntaxException | BadArithmeticExpressionException | BadConditionExpressionException e) {
                         log.error("Error while parsing queries", e);
                     } catch (IOException e) {
                         log.error("Could not find file", e);
                     }
+//                    catch (WriteToDiskError e) {
+//                        log.error("File system error", e);
+//                    }
                 }
             }
 

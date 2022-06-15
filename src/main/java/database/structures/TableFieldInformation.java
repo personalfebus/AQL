@@ -7,13 +7,23 @@ import java.io.Serializable;
 
 public class TableFieldInformation implements Serializable {
     private String fieldName;
-    private FieldDefaultValue defaultValue;
     private String fieldType;
+
+    private FieldDefaultValue defaultValue;
+
     private boolean isPrimary;
-    private boolean isForeign;
-    private boolean needsIndex;
     private boolean isNotNull;
+
+    private boolean isForeign;
+    private String referencedTableName;
+    private String referenceSchemaName;
+    private String referencedFieldName;
+    private Table referencedTable;
+    private int mapperPosition;
+
+    private boolean needsIndex;
     private int indexPosition;
+
     private boolean isPresentInInsert;
     private int insertPosition;
 
@@ -124,5 +134,45 @@ public class TableFieldInformation implements Serializable {
 
     public void setDefaultValue(FieldDefaultValue defaultValue) {
         this.defaultValue = defaultValue;
+    }
+
+    public String getReferencedTableName() {
+        return referencedTableName;
+    }
+
+    public String getReferenceSchemaName() {
+        return referenceSchemaName;
+    }
+
+    public String getReferencedFieldName() {
+        return referencedFieldName;
+    }
+
+    public void setReferencedTableName(String referencedTableName) {
+        this.referencedTableName = referencedTableName;
+    }
+
+    public void setReferenceSchemaName(String referenceSchemaName) {
+        this.referenceSchemaName = referenceSchemaName;
+    }
+
+    public void setReferencedFieldName(String referencedFieldName) {
+        this.referencedFieldName = referencedFieldName;
+    }
+
+    public void setReferencedTable(Table referencedTable) {
+        this.referencedTable = referencedTable;
+    }
+
+    public Table getReferencedTable() {
+        return referencedTable;
+    }
+
+    public int getMapperPosition() {
+        return mapperPosition;
+    }
+
+    public void setMapperPosition(int mapperPosition) {
+        this.mapperPosition = mapperPosition;
     }
 }

@@ -1,11 +1,14 @@
 package database.structures;
 
+import database.Database;
 import database.btree.BTree;
 import database.btree.Entry;
 import database.btree.exception.ReadFromDiskError;
 import database.btree.exception.WriteToDiskError;
+import database.exception.BadForeignKeyException;
 import database.exception.FieldNumberMismatchException;
 import database.exception.NotNullFieldNotInsideInsertException;
+import database.exception.TableCreationException;
 import database.exception.TypeMismatchException;
 import database.exception.UnknownFieldException;
 import database.field.Field;
@@ -40,20 +43,23 @@ public class Table implements Serializable {
     private final UUID tableUuid;
 
     private BTree table;
+    //unique indices
     private List<Index> indices;
+    //foreign mappers
+    private List<Index> mappers;
     private String tableName;
     private String schemaName;
     private int numberOfFields;
     private List<TableFieldInformation> fieldInformation;
     private BigSerialDefaultValue surrogate;
 
-    public Table(UUID databaseUuid, String tableName, String schemaName, List<TableFieldInformation> fieldInformation) throws WriteToDiskError {
+    public Table(UUID databaseUuid, String tableName, String schemaName, List<TableFieldInformation> fieldInformation, Database database) throws WriteToDiskError, TableCreationException {
         this.tableUuid = UUID.randomUUID();
         this.databaseUuid = databaseUuid;
         this.numberOfFields = fieldInformation.size();
-        table = new BTree(T, numberOfFields);
-//        BTree.writeToDisk(tableUuid, table);
-        indices = new ArrayList<>();
+        this.table = new BTree(T, numberOfFields);
+        this.indices = new ArrayList<>();
+        this.mappers = new ArrayList<>();
         this.tableName = tableName;
         this.schemaName = schemaName;
         this.fieldInformation = fieldInformation;
@@ -61,8 +67,19 @@ public class Table implements Serializable {
 
         for (TableFieldInformation tableFieldInformation : fieldInformation) {
             if (tableFieldInformation.isNeedsIndex()) {
-                indices.add(new Index()); //todo
+                indices.add(new Index(tableFieldInformation));
                 tableFieldInformation.setIndexPosition(indices.size() - 1);
+            } else if (tableFieldInformation.isForeign()) {
+                mappers.add(new Index(tableFieldInformation));
+                tableFieldInformation.setMapperPosition(mappers.size() - 1);
+                if (database.hasTableByName(tableFieldInformation.getReferenceSchemaName(), tableFieldInformation.getReferencedTableName())) {
+                    boolean flag = database.getTableByName(tableFieldInformation.getReferenceSchemaName(), tableFieldInformation.getReferencedTableName()).assertForeignField(tableFieldInformation);
+                    if (!flag) {
+                        throw new BadForeignKeyException();
+                    }
+                } else {
+                    throw new BadForeignKeyException();
+                }
             }
         }
     }
@@ -112,6 +129,8 @@ public class Table implements Serializable {
             }
             Field[] forInsertValues = new Field[fieldInformation.size()];
             Field forInsertKey = null;
+            List<Integer> indexed = new ArrayList<>();
+            List<Integer> mapped = new ArrayList<>();
 
             for (int i = 0; i < fieldInformation.size(); i++) {
                 if (fieldInformation.get(i).isPresentInInsert()) {
@@ -119,6 +138,11 @@ public class Table implements Serializable {
                         forInsertKey = Fields.astValueToField(fieldInformation.get(i).getFieldType(), insertRow.getValueList().get(fieldInformation.get(i).getInsertPosition()));
                     } else {
                         forInsertValues[i] = Fields.astValueToField(fieldInformation.get(i).getFieldType(), insertRow.getValueList().get(fieldInformation.get(i).getInsertPosition()));
+                        if (fieldInformation.get(i).hasIndex()) {
+                            indexed.add(i);
+                        } else if (fieldInformation.get(i).isForeign()) {
+                            mapped.add(i);
+                        }
                     }
                 } else {
                     if (fieldInformation.get(i).isNotNull()) {
@@ -131,7 +155,16 @@ public class Table implements Serializable {
                                 forInsertKey = fieldInformation.get(i).getDefaultValue();
                             }
                         } else {
-                            forInsertValues[i] = fieldInformation.get(i).getDefaultValue();
+                            if (!fieldInformation.get(i).hasFieldDefaultValue()) {
+                                throw new NotNullFieldNotInsideInsertException(i);
+                            } else {
+                                forInsertValues[i] = fieldInformation.get(i).getDefaultValue();
+                                if (fieldInformation.get(i).hasIndex()) {
+                                    indexed.add(i);
+                                } else if (fieldInformation.get(i).isForeign()) {
+                                    mapped.add(i);
+                                }
+                            }
                         }
                     }
                 }
@@ -139,6 +172,15 @@ public class Table implements Serializable {
 
             if (forInsertKey == null) {
                 forInsertKey = surrogate.getNext();
+            }
+
+            for (int pos : indexed) {
+                indices.get(fieldInformation.get(pos).getIndexPosition()).insert(forInsertValues[pos], forInsertKey);
+            }
+
+            for (int pos : mapped) {
+                //todo get ref ind
+//                mappers.get(fieldInformation.get(pos).getMapperPosition()).insert();
             }
             table.insert(forInsertKey, forInsertValues);
         }
@@ -228,6 +270,21 @@ public class Table implements Serializable {
 
             j++;
         }
+    }
+
+    public boolean assertForeignField(TableFieldInformation ref) {
+        boolean isCorrect = false;
+
+        for (TableFieldInformation cur : fieldInformation) {
+            if (ref.getFieldName().equals(cur.getFieldName())) {
+                if (ref.getFieldType().equals(cur.getFieldType())) {
+                    isCorrect = true;
+                }
+                break;
+            }
+        }
+
+        return isCorrect;
     }
 
 //    public Entry searchEq() {
