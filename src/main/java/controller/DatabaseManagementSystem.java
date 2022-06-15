@@ -31,7 +31,7 @@ public class DatabaseManagementSystem {
 
     public static void main(String[] args) {
         Database currentDatabase = null;
-        int mode = 0; //0 - create/checkout database; 1 - database operations
+        int mode = 0; //0 - new/checkout database; 1 - database operations
         System.out.println("======= Good to work =======");
         System.out.println("======= Now enter database management commands =======");
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
@@ -79,6 +79,14 @@ public class DatabaseManagementSystem {
                     currentDatabase = null;
                     mode = 0;
                     System.out.println("======= Now enter database management commands =======");
+                } else if (input.equals("delete")) {
+                    try {
+                        currentDatabase.delete();
+                    } catch (ReadFromDiskError e) {
+                        log.error("Problems with file system", e);
+                    }
+                    mode = 0;
+                    System.out.println("======= Now enter database management commands =======");
                 } else {
                     Path fileName = Path.of("queries/" + input);
 
@@ -110,7 +118,7 @@ public class DatabaseManagementSystem {
 
         //tests
         try {
-            FileOutputStream fileOutputStream = new FileOutputStream("binaries/output1.txt");
+            FileOutputStream fileOutputStream = new FileOutputStream("binaries/output1");
             Ror ror = new Ror(1);
             ror.setName("first");
             List<Integer> list = new ArrayList<>();
@@ -120,7 +128,7 @@ public class DatabaseManagementSystem {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
             objectOutputStream.writeObject(ror);
 
-            FileInputStream fileInputStream = new FileInputStream("binaries/output1.txt");
+            FileInputStream fileInputStream = new FileInputStream("binaries/output1");
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             Ror r = (Ror) objectInputStream.readObject();
             System.out.println(r);

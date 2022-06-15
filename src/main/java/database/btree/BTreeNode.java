@@ -9,6 +9,7 @@ import database.field.Field;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -69,6 +70,21 @@ class BTreeNode implements Serializable {
             objectOutputStream.writeObject(node);
         } catch (IOException e) {
             throw new WriteToDiskError(e);
+        }
+    }
+
+    @ReadFromDiskRequired
+    public void deleteAll() throws ReadFromDiskError {
+        if (!isLeaf) {
+            for (int i = 0; i <= n; i++) {
+                BTreeNode node = BTreeNode.readFromDisk(childrenUuids[i]);
+                node.deleteAll();
+            }
+        }
+
+        File file = new File(pathPrefix + uuid.toString());
+        if (!file.delete()) {
+            file.deleteOnExit();
         }
     }
 

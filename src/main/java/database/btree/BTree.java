@@ -8,6 +8,7 @@ import database.field.Field;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -64,6 +65,10 @@ public class BTree implements Serializable {
         } catch (IOException e) {
             throw new WriteToDiskError(e);
         }
+    }
+
+    public void deleteAll() throws ReadFromDiskError {
+        root.deleteAll();
     }
 
     @ReadFromDiskRequired

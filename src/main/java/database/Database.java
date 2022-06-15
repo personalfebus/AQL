@@ -5,6 +5,7 @@ import database.btree.exception.WriteToDiskError;
 import database.structures.Table;
 import lombok.Cleanup;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -27,28 +28,28 @@ public class Database implements Serializable {
         this.databaseName = databaseName;
         this.tables = new ArrayList<>();
         this.databaseUuid = UUID.nameUUIDFromBytes(databaseName.getBytes(StandardCharsets.UTF_8));
-        this.path = pathPrefix + this.databaseName + "/";
+        this.path = pathPrefix + this.databaseName;
     }
 
     public Database() {
         this.databaseName = "aql";
         this.tables = new ArrayList<>();
         this.databaseUuid = UUID.nameUUIDFromBytes(databaseName.getBytes(StandardCharsets.UTF_8));
-        this.path = pathPrefix + this.databaseName + "/";
+        this.path = pathPrefix + this.databaseName;
     }
 
     public Database(List<Table> tables) {
         this.tables = tables;
         this.databaseName = "aql";
         this.databaseUuid = UUID.nameUUIDFromBytes(databaseName.getBytes(StandardCharsets.UTF_8));
-        this.path = pathPrefix + this.databaseName + "/";
+        this.path = pathPrefix + this.databaseName;
     }
 
     public Database(List<Table> tables, String databaseName) {
         this.tables = tables;
         this.databaseName = databaseName;
         this.databaseUuid = UUID.nameUUIDFromBytes(databaseName.getBytes(StandardCharsets.UTF_8));
-        this.path = pathPrefix + this.databaseName + "/";
+        this.path = pathPrefix + this.databaseName;
     }
 
     public static Database readFromDisk(UUID uuid, String name) throws ReadFromDiskError {
@@ -68,6 +69,17 @@ public class Database implements Serializable {
             objectOutputStream.writeObject(database);
         } catch (IOException e) {
             throw new WriteToDiskError(e);
+        }
+    }
+
+    public void delete() throws ReadFromDiskError {
+        for (Table table : tables) {
+            table.delete();
+        }
+
+        File file = new File(path);
+        if (!file.delete()) {
+            file.deleteOnExit();
         }
     }
 

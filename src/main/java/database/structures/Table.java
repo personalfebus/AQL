@@ -52,7 +52,7 @@ public class Table implements Serializable {
         this.databaseUuid = databaseUuid;
         this.numberOfFields = fieldInformation.size();
         table = new BTree(T, numberOfFields);
-        BTree.writeToDisk(tableUuid, table);
+//        BTree.writeToDisk(tableUuid, table);
         indices = new ArrayList<>();
         this.tableName = tableName;
         this.schemaName = schemaName;
@@ -85,6 +85,10 @@ public class Table implements Serializable {
         } catch (IOException e) {
             throw new WriteToDiskError(e);
         }
+    }
+
+    public void delete() throws ReadFromDiskError {
+        table.deleteAll();
     }
 
     public String getTableName() {
