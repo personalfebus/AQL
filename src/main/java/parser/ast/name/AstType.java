@@ -1,4 +1,4 @@
-package parser.ast;
+package parser.ast.name;
 
 public class AstType {
     private final String typeName;

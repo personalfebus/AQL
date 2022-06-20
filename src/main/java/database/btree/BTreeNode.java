@@ -8,6 +8,7 @@ import database.btree.exception.WriteToDiskError;
 import database.field.Field;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
+import parser.ast.condition.AstCondition;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -165,6 +167,174 @@ class BTreeNode implements Serializable {
         Entry result = children[i].getEntryByKey(key);
         children[i] = null;
         return result;
+    }
+
+    @ReadFromDiskRequired
+    public void getEntriesByKeyGR(Field key, Set<Entry> result) throws ReadFromDiskError {
+        boolean closed = false;
+
+        for (int i = n - 1; i >= 0; i--) {
+            if (keys[i].compareTo(key) > 0) {
+                if (!isLeaf) {
+                    BTreeNode x = readFromDisk(childrenUuids[i + 1]);
+                    x.addAllEntries(result);
+                }
+                result.add(new Entry(keys[i], fieldContainer.getRow(i)));
+            } else {
+                closed = true;
+                if (!isLeaf) {
+                    BTreeNode x = readFromDisk(childrenUuids[i + 1]);
+                    x.getEntriesByKeyGR(key, result);
+                    break;
+                }
+            }
+        }
+
+        if (!isLeaf && !closed) {
+            BTreeNode x = readFromDisk(childrenUuids[0]);
+            x.getEntriesByKeyGR(key, result);
+        }
+    }
+
+    @ReadFromDiskRequired
+    public void getEntriesByKeyGE(Field key, Set<Entry> result) throws ReadFromDiskError {
+        boolean closed = false;
+
+        for (int i = n - 1; i >= 0; i--) {
+            if (keys[i].compareTo(key) >= 0) {
+                if (!isLeaf) {
+                    BTreeNode x = readFromDisk(childrenUuids[i + 1]);
+                    x.addAllEntries(result);
+                }
+                result.add(new Entry(keys[i], fieldContainer.getRow(i)));
+            } else {
+                closed = true;
+                if (!isLeaf) {
+                    BTreeNode x = readFromDisk(childrenUuids[i + 1]);
+                    x.getEntriesByKeyGE(key, result);
+                    break;
+                }
+            }
+        }
+
+        if (!isLeaf && !closed) {
+            BTreeNode x = readFromDisk(childrenUuids[0]);
+            x.getEntriesByKeyGE(key, result);
+        }
+    }
+
+    @ReadFromDiskRequired
+    public void getEntriesByKeyLR(Field key, Set<Entry> result) throws ReadFromDiskError {
+        boolean closed = false;
+
+        for (int i = 0; i < n; i++) {
+            if (keys[i].compareTo(key) < 0) {
+                if (!isLeaf) {
+                    BTreeNode x = readFromDisk(childrenUuids[i]);
+                    x.addAllEntries(result);
+                }
+                result.add(new Entry(keys[i], fieldContainer.getRow(i)));
+            } else {
+                closed = true;
+                if (!isLeaf) {
+                    BTreeNode x = readFromDisk(childrenUuids[i]);
+                    x.getEntriesByKeyLR(key, result);
+                }
+                break;
+            }
+        }
+
+        if (!isLeaf && !closed) {
+            BTreeNode x = readFromDisk(childrenUuids[n]);
+            x.getEntriesByKeyLR(key, result);
+        }
+    }
+
+    @ReadFromDiskRequired
+    public void getEntriesByKeyLE(Field key, Set<Entry> result) throws ReadFromDiskError {
+        boolean closed = false;
+
+        for (int i = 0; i < n; i++) {
+            if (keys[i].compareTo(key) <= 0) {
+                if (!isLeaf) {
+                    BTreeNode x = readFromDisk(childrenUuids[i]);
+                    x.addAllEntries(result);
+                }
+                result.add(new Entry(keys[i], fieldContainer.getRow(i)));
+            } else {
+                closed = true;
+                if (!isLeaf) {
+                    BTreeNode x = readFromDisk(childrenUuids[i]);
+                    x.getEntriesByKeyLE(key, result);
+                }
+                break;
+            }
+        }
+
+        if (!isLeaf && !closed) {
+            BTreeNode x = readFromDisk(childrenUuids[n]);
+            x.getEntriesByKeyLE(key, result);
+        }
+    }
+
+    @ReadFromDiskRequired
+    public void getEntriesByKeyNE(Field key, Set<Entry> result) throws ReadFromDiskError {
+        boolean closed = false;
+
+        for (int i = 0; i < n; i++) {
+            if (keys[i].compareTo(key) <= 0) {
+                if (!isLeaf) {
+                    BTreeNode x = readFromDisk(childrenUuids[i]);
+                    x.addAllEntries(result);
+                }
+
+                if (keys[i].compareTo(key) != 0) {
+                    result.add(new Entry(keys[i], fieldContainer.getRow(i)));
+                }
+            } else if (keys[i].compareTo(key) > 0) {
+                if (!closed) {
+                    closed = true;
+
+                    if (!isLeaf) {
+                        BTreeNode x = readFromDisk(childrenUuids[i]);
+                        x.getEntriesByKeyNE(key, result);
+                    }
+                }
+
+                if (!isLeaf) {
+                    BTreeNode x = readFromDisk(childrenUuids[i + 1]);
+                    x.addAllEntries(result);
+                }
+                result.add(new Entry(keys[i], fieldContainer.getRow(i)));
+            }
+        }
+
+        if (!isLeaf && !closed) {
+            BTreeNode x = readFromDisk(childrenUuids[n]);
+            x.getEntriesByKeyNE(key, result);
+        }
+    }
+
+    /**
+     * Add all entries from current node and its children
+     * @param result Result set
+     * @throws ReadFromDiskError FS error
+     */
+    @ReadFromDiskRequired
+    public void addAllEntries(Set<Entry> result) throws ReadFromDiskError {
+        for (int i = 0; i < n; i++) {
+            if (!isLeaf) {
+                BTreeNode x = readFromDisk(childrenUuids[i]);
+                x.addAllEntries(result);
+            }
+
+            result.add(new Entry(keys[i], fieldContainer.getRow(i)));
+        }
+
+        if (!isLeaf) {
+            BTreeNode x = readFromDisk(childrenUuids[n]);
+            x.addAllEntries(result);
+        }
     }
 
     /**

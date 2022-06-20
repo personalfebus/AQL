@@ -3,8 +3,8 @@ package database.btree;
 import database.field.Field;
 
 public class Entry {
-    private final Field key;
-    private final Field[] values;
+    private Field key;
+    private Field[] values;
 
     public Entry(Field key, Field[] values) {
         this.key = key;
@@ -17,5 +17,13 @@ public class Entry {
 
     public Field[] getValues() {
         return values;
+    }
+
+    public void setKey(Field key) {
+        this.key = key;
+    }
+
+    public void setValues(Field[] values) {
+        this.values = values;
     }
 }

@@ -4,13 +4,13 @@ import database.Database;
 import database.btree.exception.ReadFromDiskError;
 import database.exception.TypeMismatchException;
 import database.exception.UnknownFieldException;
+import database.exception.UnsupportedOperationException;
 import database.structures.SelectOutputRow;
 import database.structures.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import parser.ast.condition.AstCondition;
 import parser.ast.function.AstFunction;
-import parser.ast.function.data.AstInsertFunction;
 import parser.ast.name.AstFieldName;
 import parser.ast.name.AstTableName;
 
@@ -47,18 +47,19 @@ public class AstSelectFunction implements AstFunction {
         return AstSelectFunction.class.getName();
     }
 
-    //todo
     @Override
     public void execute(Database database) {
         if (database.hasTableByName(tableName.getSchemaName(), tableName.getTableName())) {
             Table table = database.getTableByName(tableName.getSchemaName(), tableName.getTableName());
             try {
-                List<SelectOutputRow> rows = table.selectValue(columnList, condition);
+                List<SelectOutputRow> rows = table.select(columnList, condition);
                 System.out.println(rows);
             } catch (TypeMismatchException | UnknownFieldException e) {
                 log.error("Error in select", e);
             } catch (ReadFromDiskError e) {
                 log.error("Internal filesystem error occurred during command execution", e);
+            } catch (UnsupportedOperationException e) {
+                log.info("Unsupported operation");
             }
         } else {
             log.error("Table does not exist");

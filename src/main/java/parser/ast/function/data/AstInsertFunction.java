@@ -8,6 +8,7 @@ import database.exception.NotNullFieldNotInsideInsertException;
 import database.exception.TypeMismatchException;
 import database.exception.UnknownFieldException;
 import database.structures.Table;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import parser.ast.function.AstFunction;
@@ -17,9 +18,8 @@ import parser.ast.name.AstTableName;
 
 import java.util.List;
 
+@Slf4j
 public class AstInsertFunction implements AstFunction {
-    private final static Logger log = LoggerFactory.getLogger(AstInsertFunction.class.getName());
-
     private final AstTableName tableName;
     private final List<AstFieldName> columnList;
     private final List<AstInsertRow> rowList;

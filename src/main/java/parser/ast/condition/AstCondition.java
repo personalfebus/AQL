@@ -1,5 +1,10 @@
 package parser.ast.condition;
 
+import com.sun.source.tree.BreakTree;
+import parser.ast.arithmetic.AstArithExpr;
+import parser.ast.arithmetic.AstArithExprIdentConstant;
+import parser.ast.arithmetic.AstArithExprPart;
+import parser.ast.arithmetic.AstArithExprValue;
 import parser.exception.BadConditionExpressionException;
 
 import java.util.*;
@@ -71,5 +76,54 @@ public class AstCondition implements AstConditionPart {
 
     public List<AstConditionPart> getParts() {
         return parts;
+    }
+
+    public List<String> getFieldNames() {
+        List<String> result = new ArrayList<>();
+
+        for (AstConditionPart part : parts) {
+            if (part instanceof AstConditionConstantVariable) {
+                AstConditionConstantVariable variable = (AstConditionConstantVariable) part;
+                AstArithExprPart part1 = variable.getArithExpr().getParts().get(0);
+
+                if (part1 instanceof AstArithExprIdentConstant) {
+                    AstArithExprIdentConstant ident = (AstArithExprIdentConstant) part1;
+                    result.add(ident.getFieldName().getFieldName().getName());
+                } else if (part1 instanceof AstArithExprValue) {
+                    //return null;
+                }
+            } else if (part instanceof AstConditionConstant) {
+                //return null;
+            }
+        }
+
+        return result;
+    }
+
+    public String getOperator() {
+        for (AstConditionPart part : parts) {
+            if (part instanceof AstConditionOperator) {
+                return ((AstConditionOperator) part).getOperator();
+            }
+        }
+
+        return null;
+    }
+
+    public int getFieldCount() {
+        int count = 0;
+
+        for (AstConditionPart part : parts) {
+            if (part instanceof AstConditionConstantVariable) {
+                AstConditionConstantVariable variable = (AstConditionConstantVariable) part;
+                AstArithExprPart part1 = variable.getArithExpr().getParts().get(0);
+
+                if (part1 instanceof AstArithExprIdentConstant) {
+                    count++;
+                }
+            }
+        }
+
+        return count;
     }
 }

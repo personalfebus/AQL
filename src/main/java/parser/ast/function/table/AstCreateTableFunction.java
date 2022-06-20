@@ -5,6 +5,7 @@ import database.btree.exception.WriteToDiskError;
 import database.exception.TableCreationException;
 import database.structures.Table;
 import database.structures.TableFieldInformation;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import parser.ast.function.AstFunction;
@@ -15,9 +16,8 @@ import database.exception.TypeMismatchException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 public class AstCreateTableFunction implements AstFunction {
-    private final static Logger log = LoggerFactory.getLogger(AstCreateTableFunction.class.getName());
-
     private final boolean hasNotExistPrefix;
     private final AstTableName tableName;
     private final List<AstColumnDefinition> columnDefinitionList;

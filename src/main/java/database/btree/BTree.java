@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -91,6 +92,41 @@ public class BTree implements Serializable {
             return null;
         } else {
             return root.getEntryByKey(key);
+        }
+    }
+
+    @ReadFromDiskRequired
+    public void getEntriesByKeyGR(Field key, Set<Entry> result) throws ReadFromDiskError {
+        if (root != null) {
+            root.getEntriesByKeyGR(key, result);
+        }
+    }
+
+    @ReadFromDiskRequired
+    public void getEntriesByKeyGE(Field key, Set<Entry> result) throws ReadFromDiskError {
+        if (root != null) {
+            root.getEntriesByKeyGE(key, result);
+        }
+    }
+
+    @ReadFromDiskRequired
+    public void getEntriesByKeyLR(Field key, Set<Entry> result) throws ReadFromDiskError {
+        if (root != null) {
+            root.getEntriesByKeyLR(key, result);
+        }
+    }
+
+    @ReadFromDiskRequired
+    public void getEntriesByKeyLE(Field key, Set<Entry> result) throws ReadFromDiskError {
+        if (root != null) {
+            root.getEntriesByKeyLE(key, result);
+        }
+    }
+
+    @ReadFromDiskRequired
+    public void getEntriesByKeyNE(Field key, Set<Entry> result) throws ReadFromDiskError {
+        if (root != null) {
+            root.getEntriesByKeyNE(key, result);
         }
     }
 

@@ -87,6 +87,15 @@ public class Database implements Serializable {
         tables.add(table);
     }
 
+    public void deleteTable(String schemaName, String tableName) {
+        for (int i = 0; i < tables.size(); i++) {
+            if (tables.get(i).getTableName().equalsIgnoreCase(tableName) && tables.get(i).getSchemaName().equalsIgnoreCase(schemaName)) {
+                tables.remove(i);
+                break;
+            }
+        }
+    }
+
     public boolean hasTableByName(String schemaName, String tableName) {
         boolean isPresent = false;
 

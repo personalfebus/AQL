@@ -11,6 +11,7 @@ import database.exception.NotNullFieldNotInsideInsertException;
 import database.exception.TableCreationException;
 import database.exception.TypeMismatchException;
 import database.exception.UnknownFieldException;
+import database.exception.UnsupportedOperationException;
 import database.field.Field;
 import database.field.Fields;
 import database.structures.value.BigSerialDefaultValue;
@@ -21,6 +22,7 @@ import parser.ast.arithmetic.AstArithExprIdentConstant;
 import parser.ast.arithmetic.AstArithExprValue;
 import parser.ast.condition.*;
 import parser.ast.function.data.AstInsertRow;
+import parser.ast.function.data.AstUpdateValue;
 import parser.ast.name.AstFieldName;
 import parser.ast.value.AstValue;
 
@@ -31,7 +33,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -63,14 +69,19 @@ public class Table implements Serializable {
         this.tableName = tableName;
         this.schemaName = schemaName;
         this.fieldInformation = fieldInformation;
-        this.surrogate = new BigSerialDefaultValue();
 
+        boolean hasPrimary = false;
+        int j = 0;
         for (TableFieldInformation tableFieldInformation : fieldInformation) {
-            if (tableFieldInformation.isNeedsIndex()) {
-                indices.add(new Index(tableFieldInformation));
+            if (tableFieldInformation.isPrimary()) {
+                hasPrimary = true;
+                tableFieldInformation.setTreePosition(-1);
+            } else if (tableFieldInformation.isNeedsIndex()) {
+                indices.add(new Index(tableFieldInformation, tableFieldInformation.getFieldName()));
                 tableFieldInformation.setIndexPosition(indices.size() - 1);
+                tableFieldInformation.setTreePosition(hasPrimary ? j - 1 : j);
             } else if (tableFieldInformation.isForeign()) {
-                mappers.add(new Index(tableFieldInformation));
+                mappers.add(new Index(tableFieldInformation, tableFieldInformation.getFieldName()));
                 tableFieldInformation.setMapperPosition(mappers.size() - 1);
                 if (database.hasTableByName(tableFieldInformation.getReferenceSchemaName(), tableFieldInformation.getReferencedTableName())) {
                     boolean flag = database.getTableByName(tableFieldInformation.getReferenceSchemaName(), tableFieldInformation.getReferencedTableName()).assertForeignField(tableFieldInformation);
@@ -80,7 +91,18 @@ public class Table implements Serializable {
                 } else {
                     throw new BadForeignKeyException();
                 }
+                tableFieldInformation.setTreePosition(hasPrimary ? j - 1 : j);
+            } else {
+                tableFieldInformation.setTreePosition(hasPrimary ? j - 1 : j);
             }
+
+            j++;
+        }
+
+        if (hasPrimary) {
+            this.surrogate = null;
+        } else {
+            this.surrogate = new BigSerialDefaultValue();
         }
     }
 
@@ -127,7 +149,7 @@ public class Table implements Serializable {
             if (insertRow.getValueList().size() != columnList.size()) {
                 throw new FieldNumberMismatchException();
             }
-            Field[] forInsertValues = new Field[fieldInformation.size()];
+            Field[] forInsertValues = new Field[surrogate == null ? fieldInformation.size() - 1 : fieldInformation.size()];
             Field forInsertKey = null;
             List<Integer> indexed = new ArrayList<>();
             List<Integer> mapped = new ArrayList<>();
@@ -137,7 +159,7 @@ public class Table implements Serializable {
                     if (fieldInformation.get(i).isPrimary()) {
                         forInsertKey = Fields.astValueToField(fieldInformation.get(i).getFieldType(), insertRow.getValueList().get(fieldInformation.get(i).getInsertPosition()));
                     } else {
-                        forInsertValues[i] = Fields.astValueToField(fieldInformation.get(i).getFieldType(), insertRow.getValueList().get(fieldInformation.get(i).getInsertPosition()));
+                        forInsertValues[fieldInformation.get(i).getTreePosition()] = Fields.astValueToField(fieldInformation.get(i).getFieldType(), insertRow.getValueList().get(fieldInformation.get(i).getInsertPosition()));
                         if (fieldInformation.get(i).hasIndex()) {
                             indexed.add(i);
                         } else if (fieldInformation.get(i).isForeign()) {
@@ -158,7 +180,7 @@ public class Table implements Serializable {
                             if (!fieldInformation.get(i).hasFieldDefaultValue()) {
                                 throw new NotNullFieldNotInsideInsertException(i);
                             } else {
-                                forInsertValues[i] = fieldInformation.get(i).getDefaultValue();
+                                forInsertValues[fieldInformation.get(i).getTreePosition()] = fieldInformation.get(i).getDefaultValue();
                                 if (fieldInformation.get(i).hasIndex()) {
                                     indexed.add(i);
                                 } else if (fieldInformation.get(i).isForeign()) {
@@ -175,12 +197,12 @@ public class Table implements Serializable {
             }
 
             for (int pos : indexed) {
-                indices.get(fieldInformation.get(pos).getIndexPosition()).insert(forInsertValues[pos], forInsertKey);
+                indices.get(fieldInformation.get(pos).getIndexPosition()).insert(forInsertValues[fieldInformation.get(pos).getTreePosition()], forInsertKey);
             }
 
             for (int pos : mapped) {
-                //todo get ref ind
-//                mappers.get(fieldInformation.get(pos).getMapperPosition()).insert();
+                //todo get ref ind from another table
+                mappers.get(fieldInformation.get(pos).getMapperPosition()).insert(forInsertKey, forInsertValues[fieldInformation.get(pos).getTreePosition()]);
             }
             table.insert(forInsertKey, forInsertValues);
         }
@@ -191,38 +213,51 @@ public class Table implements Serializable {
         }
     }
 
-    public List<SelectOutputRow> selectValue(List<AstFieldName> columnList, AstCondition condition) throws TypeMismatchException, UnknownFieldException, ReadFromDiskError {
+    public List<SelectOutputRow> select(List<AstFieldName> columnList, AstCondition condition) throws TypeMismatchException, UnknownFieldException, ReadFromDiskError, UnsupportedOperationException {
         List<SelectOutputRow> result = new ArrayList<>();
 
         assertColumnList(columnList);
 
         for (int i = 0; i < condition.getParts().size(); i += 3) {
-            Entry entry = selectEqPrKey(columnList, condition);
-            Field[] fields = new Field[columnList.size()];
+            int fieldsUsed = condition.getFieldCount();
+            Set<Entry> entrySet = new HashSet<>();
 
-            int j = 0;
-            for (TableFieldInformation inf : fieldInformation) {
-                if (inf.isPresentInInsert()) {
-                    fields[inf.getInsertPosition()] = (j == 0 ? entry.getKey() : entry.getValues()[j - 1]);
-                }
+            if (fieldsUsed == 1) {
+                TableFieldInformation field = findFieldInformationByName(condition.getFieldNames().get(0));
 
-                j++;
+            } else {
+                throw new UnsupportedOperationException();
             }
-            SelectOutputRow row = new SelectOutputRow(fields);
-            result.add(row);
+
+            selectByPrimaryKey(columnList, condition, entrySet);
+
+            for (Entry entry : entrySet) {
+                Field[] fields = new Field[columnList.size()];
+
+                int j = 0;
+                for (TableFieldInformation inf : fieldInformation) {
+                    if (inf.isPresentInInsert()) {
+                        fields[inf.getInsertPosition()] = (j == 0 ? entry.getKey() : entry.getValues()[j - 1]);
+                    }
+
+                    j++;
+                }
+                SelectOutputRow row = new SelectOutputRow(fields);
+                result.add(row);
+            }
         }
 
         return result;
     }
 
-    public Entry selectEqPrKey(List<AstFieldName> columnList, AstCondition condition) throws TypeMismatchException, ReadFromDiskError {
+    public void selectByPrimaryKey(List<AstFieldName> columnList, AstCondition condition, Set<Entry> result) throws TypeMismatchException, ReadFromDiskError, UnsupportedOperationException {
         String fieldName = "";
         Field key = null;
         String op = "";
 
         for (AstConditionPart part : condition.getParts()) {
             if (part.getType().equals(AstConditionParts.astConditionConstantRValueType)) {
-                AstArithExpr expr = ((AstConditionConstantRValue) part).getArithExpr();
+                AstArithExpr expr = ((AstConditionConstantVariable) part).getArithExpr();
                 if (expr.getParts().get(0).getType().equals(AstArithExprIdentConstant.class.getName())) {
                     AstArithExprIdentConstant constant = (AstArithExprIdentConstant) expr.getParts().get(0);
                     fieldName = constant.getFieldName().getFieldName().getName();
@@ -239,11 +274,159 @@ public class Table implements Serializable {
             }
         }
 
-        if (key == null) {
-            return null;
+        if (key == null || op == null) {
+            return;
         }
 
-        return table.getEntryByKey(key);
+        switch (op) {
+            case "=": {
+                result.add(table.getEntryByKey(key));
+                return;
+            }
+            case ">": {
+                table.getEntriesByKeyGR(key, result);
+                return;
+            }
+            case "<": {
+                table.getEntriesByKeyLR(key, result);
+                return;
+            }
+            case ">=": {
+                table.getEntriesByKeyGE(key, result);
+                return;
+            }
+            case "<=": {
+                table.getEntriesByKeyLE(key, result);
+                return;
+            }
+            case "!=": {
+                table.getEntriesByKeyNE(key, result);
+                return;
+            }
+            default: throw new UnsupportedOperationException();
+        }
+    }
+
+    public void delete(AstCondition condition) throws UnsupportedOperationException, WriteToDiskError, ReadFromDiskError, TypeMismatchException {
+        for (int i = 0; i < condition.getParts().size(); i += 3) {
+            int fieldsUsed = condition.getFieldCount();
+
+            if (fieldsUsed == 1) {
+                TableFieldInformation field = findFieldInformationByName(condition.getFieldNames().get(0));
+
+            } else {
+                throw new UnsupportedOperationException();
+            }
+
+            deleteByPrimaryKey(condition);
+        }
+    }
+
+    public void deleteByPrimaryKey(AstCondition condition) throws UnsupportedOperationException, WriteToDiskError, ReadFromDiskError, TypeMismatchException {
+        Set<Entry> result = new HashSet<>();
+        String fieldName = "";
+        Field key = null;
+        String op = "";
+
+        for (AstConditionPart part : condition.getParts()) {
+            if (part.getType().equals(AstConditionParts.astConditionConstantRValueType)) {
+                AstArithExpr expr = ((AstConditionConstantVariable) part).getArithExpr();
+                if (expr.getParts().get(0).getType().equals(AstArithExprIdentConstant.class.getName())) {
+                    AstArithExprIdentConstant constant = (AstArithExprIdentConstant) expr.getParts().get(0);
+                    fieldName = constant.getFieldName().getFieldName().getName();
+                } else if (expr.getParts().get(0).getType().equals(AstArithExprValue.class.getName())) {
+                    AstArithExprValue value = (AstArithExprValue) expr.getParts().get(0);
+                    key = Fields.astValueToField("int", value.getValue());
+                }
+            } else if (part.getType().equals(AstConditionParts.astConditionConstantType)) {
+                AstValue value = ((AstConditionConstant) part).getValue();
+                key = Fields.astValueToField("int", value);
+            } else if (part.getType().equals(AstConditionParts.astConditionOperatorType)) {
+                AstConditionOperator operator = (AstConditionOperator) part;
+                op = operator.getOperator();
+            }
+        }
+
+        if (key == null || op == null) {
+            return;
+        }
+
+        switch (op) {
+            case "=": {
+                result.add(table.getEntryByKey(key));
+                break;
+            }
+            case ">": {
+                table.getEntriesByKeyGR(key, result);
+                break;
+            }
+            case "<": {
+                table.getEntriesByKeyLR(key, result);
+                break;
+            }
+            case ">=": {
+                table.getEntriesByKeyGE(key, result);
+                break;
+            }
+            case "<=": {
+                table.getEntriesByKeyLE(key, result);
+                break;
+            }
+            case "!=": {
+                table.getEntriesByKeyNE(key, result);
+                break;
+            }
+            default: throw new UnsupportedOperationException();
+        }
+
+        for (Entry entry : result) {
+            table.remove(entry.getKey());
+        }
+    }
+
+    public void update(List<AstUpdateValue> updateValues, AstCondition condition) throws UnsupportedOperationException, UnknownFieldException, WriteToDiskError, TypeMismatchException, ReadFromDiskError {
+        for (int i = 0; i < condition.getParts().size(); i += 3) {
+            int fieldsUsed = condition.getFieldCount();
+
+            if (fieldsUsed == 1) {
+                TableFieldInformation field = findFieldInformationByName(condition.getFieldNames().get(0));
+
+            } else {
+                throw new UnsupportedOperationException();
+            }
+
+            updateByPrimaryKey(updateValues, condition);
+        }
+    }
+
+    public void updateByPrimaryKey(List<AstUpdateValue> updateValues, AstCondition condition) throws TypeMismatchException, ReadFromDiskError, UnsupportedOperationException, WriteToDiskError, UnknownFieldException {
+        Set<Entry> forUpdate = new HashSet<>();
+
+        selectByPrimaryKey(null, condition, forUpdate);
+
+        for (Entry entry : forUpdate) {
+            int j = 0;
+            for (AstUpdateValue updateValue : updateValues) {
+                TableFieldInformation tableFieldInformation = findFieldInformationByName(updateValue.getFieldName().getName());
+
+                if (tableFieldInformation == null) {
+                    throw new UnknownFieldException(j);
+                }
+
+                int pos = tableFieldInformation.getTreePosition();
+                if (pos < 0) {
+                    entry.setKey(Fields.astValueToField(tableFieldInformation.getFieldType(), updateValue.getValue()));
+                }
+                entry.getValues()[pos] = Fields.astValueToField(tableFieldInformation.getFieldType(), updateValue.getValue());
+                j++;
+            }
+        }
+
+        deleteByPrimaryKey(condition);
+
+        for (Entry entry : forUpdate) {
+            table.insert(entry.getKey(), entry.getValues());
+        }
     }
 
     private void assertColumnList(List<AstFieldName> columnList) throws UnknownFieldException {
@@ -285,6 +468,74 @@ public class Table implements Serializable {
         }
 
         return isCorrect;
+    }
+
+    public boolean hasIndexByName(String indexName) {
+        boolean isPresent = false;
+
+        for (Index index : indices) {
+            if (index.getName().equals(indexName)) {
+                isPresent = true;
+                break;
+            }
+        }
+
+        return isPresent;
+    }
+
+    public Index getIndexByName(String indexName) {
+        for (Index index : indices) {
+            if (index.getName().equals(indexName)) {
+                return index;
+            }
+        }
+
+        return null;
+    }
+
+    public void removeIndexByName(String indexName) {
+        for (int i = 0; i < indices.size(); i++) {
+            if (indices.get(i).getName().equals(indexName)) {
+                indices.remove(i);
+                break;
+            }
+        }
+    }
+
+    public void addIndex(String fieldName, String name) {
+        TableFieldInformation tableFieldInformation = findFieldInformationByName(fieldName);
+
+        if (!tableFieldInformation.hasIndex()) {
+            indices.add(new Index(tableFieldInformation, tableFieldInformation.getFieldName()));
+            tableFieldInformation.setIndexPosition(indices.size() - 1);
+        }
+    }
+
+    public TableFieldInformation findFieldInformationByName(String name) {
+        for (TableFieldInformation tableFieldInformation : fieldInformation) {
+            if (tableFieldInformation.getFieldName().equals(name)) {
+                return tableFieldInformation;
+            }
+        }
+
+        return null;
+    }
+
+
+    private Map<String, Integer> FieldNameToPosition() {
+        Map<String, Integer> result = new HashMap<>();
+
+        int i = 0;
+        for (TableFieldInformation tableFieldInformation : fieldInformation) {
+            if (tableFieldInformation.isPrimary()) {
+                result.put(tableFieldInformation.getFieldName(), -1);
+            } else {
+                result.put(tableFieldInformation.getFieldName(), i);
+            }
+            i++;
+        }
+
+        return result;
     }
 
 //    public Entry searchEq() {

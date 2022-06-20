@@ -3,10 +3,10 @@ package parser;
 import lexer.ILexer;
 import lexer.Lexer;
 import lexer.token.*;
-import parser.ast.AstType;
+import parser.ast.name.AstType;
 import parser.ast.arithmetic.*;
 import parser.ast.condition.AstCondition;
-import parser.ast.condition.AstConditionConstantRValue;
+import parser.ast.condition.AstConditionConstantVariable;
 import parser.ast.condition.AstConditionOperator;
 import parser.ast.condition.AstConditionSeparator;
 import parser.ast.constraint.*;
@@ -616,7 +616,7 @@ public class Parser implements IParser {
             condition.addPart(new AstConditionSeparator("SEPARATOR_CLOSE"));
         } else {
             AstArithExpr first = parseArithExpr();
-            condition.addPart(new AstConditionConstantRValue(first));
+            condition.addPart(new AstConditionConstantVariable(first));
             assertTokenType(Tokens.operatorType);
 
             if (currentToken.getBody().equalsIgnoreCase(">")) {
@@ -637,7 +637,7 @@ public class Parser implements IParser {
 
             nextToken();
             AstArithExpr second = parseArithExpr();
-            condition.addPart(new AstConditionConstantRValue(second));
+            condition.addPart(new AstConditionConstantVariable(second));
         }
     }
 

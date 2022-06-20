@@ -8,6 +8,7 @@ import java.io.Serializable;
 public class TableFieldInformation implements Serializable {
     private String fieldName;
     private String fieldType;
+    private int treePosition;
 
     private FieldDefaultValue defaultValue;
 
@@ -174,5 +175,13 @@ public class TableFieldInformation implements Serializable {
 
     public void setMapperPosition(int mapperPosition) {
         this.mapperPosition = mapperPosition;
+    }
+
+    public int getTreePosition() {
+        return treePosition;
+    }
+
+    public void setTreePosition(int treePosition) {
+        this.treePosition = treePosition;
     }
 }

@@ -9,7 +9,8 @@ create table if not exists bmstu.students (
 insert into bmstu.students
 (name, surname, patronymic, identity_code) values
 ("Gleb", "Zavyalov", "Olegovich", "18u726"),
-("Andrey", "Zvorigin", "Valerevich", "18u727");
+("Andrey", "Zvorigin", "Valerevich", "18u727"),
+("Litovskiy", "Vladislav", "Evgenevich", "18u801");
 
 select id, identity_code, patronymic from bmstu.students
-where id = 1;
+where id != 1;

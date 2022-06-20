@@ -1,12 +1,14 @@
 package parser.ast.function.index;
 
 import database.Database;
+import lombok.extern.slf4j.Slf4j;
 import parser.ast.function.AstFunction;
 import parser.ast.name.AstFieldName;
 import parser.ast.name.AstIndexName;
 import parser.ast.name.AstIndexType;
 import parser.ast.name.AstTableName;
 
+@Slf4j
 public class AstCreateIndexFunction implements AstFunction {
     private final boolean hasIfNotExistPrefix;
     private final AstIndexName indexName;
@@ -47,9 +49,19 @@ public class AstCreateIndexFunction implements AstFunction {
         return AstCreateIndexFunction.class.getName();
     }
 
-    //todo
     @Override
     public void execute(Database database) {
+        boolean isPresent = database.hasTableByName(tableName.getSchemaName(), tableName.getTableName());
 
+        if (hasIfNotExistPrefix && !isPresent) {
+            log.info("Not table found");
+        } else {
+            if (isPresent) {
+                database.getTableByName(tableName.getSchemaName(), tableName.getTableName()).addIndex(fieldName.getName(), indexName.getName());
+                log.info("Index added successfully");
+            } else {
+                log.error("Not table found");
+            }
+        }
     }
 }

@@ -2,9 +2,8 @@ package parser.ast.function;
 
 import database.structures.TableFieldInformation;
 import database.structures.value.BigSerialDefaultValue;
-import database.structures.value.IntFieldDefaultValue;
 import database.structures.value.SerialDefaultValue;
-import parser.ast.AstType;
+import parser.ast.name.AstType;
 import parser.ast.constraint.AstConstraint;
 import parser.ast.name.AstFieldName;
 import database.exception.TypeMismatchException;

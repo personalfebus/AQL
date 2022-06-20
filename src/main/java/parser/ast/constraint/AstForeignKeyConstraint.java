@@ -1,7 +1,7 @@
 package parser.ast.constraint;
 
 import database.structures.TableFieldInformation;
-import parser.ast.AstType;
+import parser.ast.name.AstType;
 import parser.ast.name.AstFieldName;
 import parser.ast.name.AstTableName;
 import database.exception.TypeMismatchException;
